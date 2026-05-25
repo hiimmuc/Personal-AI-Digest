@@ -1,0 +1,8 @@
+# Watched authors — papers by these authors get a relevance boost
+# Format: Display Name, Semantic Scholar Author ID
+# Find author IDs at: https://www.semanticscholar.org/
+#
+# Example:
+# Yann LeCun, 1741101
+# Geoffrey Hinton, 1701686
+# Yoshua Bengio, 1792551

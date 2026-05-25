@@ -1,0 +1,62 @@
+arxiv:
+    categories:
+        - cs.AI
+        - cs.LG
+        - cs.RO
+        - cs.CV
+        - cs.CL
+    max_papers_per_day: 20
+    relevance_cutoff: 2 # drop papers below this score
+    hindex_cutoff: 10 # Semantic Scholar h-index prefilter
+    author_watchlist: configs/authors.txt
+    interests: >
+        AI, machine learning, large language models, computer vision,
+        robotics, reinforcement learning, multimodal learning,
+        foundation models, generative models
+
+topic_categories:
+    - LLM
+    - Computer Vision
+    - Robotics
+    - Speech
+    - RL
+    - MLOps
+    - General
+
+news:
+    relevance_cutoff: 2
+    sources:
+        - name: Hacker News
+          type: rss
+          url: https://news.ycombinator.com/rss
+          enabled: true
+        - name: NVIDIA Technical Blog
+          type: rss
+          url: https://developer.nvidia.com/blog/feed
+          enabled: true
+        - name: Reddit r/MachineLearning
+          type: rss
+          url: https://www.reddit.com/r/MachineLearning/.rss
+          enabled: true
+        - name: Reddit r/LocalLLaMA
+          type: rss
+          url: https://www.reddit.com/r/LocalLLaMA/.rss
+          enabled: true
+        - name: The Gradient
+          type: rss
+          url: https://thegradient.pub/rss/
+          enabled: true
+        - name: Hugging Face Blog
+          type: rss
+          url: https://huggingface.co/blog/feed.xml
+          enabled: true
+
+delivery:
+    telegram_enabled: true
+    github_pages_repo: hiimmuc/ai-digest-daily
+    daily_time_utc: "06:00"
+    weekly_day: Sunday
+
+site:
+    title: "AI Digest"
+    sort_default: recent # recent | relevance

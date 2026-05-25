@@ -1,0 +1,36 @@
+name: Daily Digest
+
+on:
+    schedule:
+        - cron: "0 6 * * *" # 06:00 UTC daily
+    workflow_dispatch:
+
+jobs:
+    daily:
+        runs-on: self-hosted
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install dependencies
+              run: pip install -r requirements.txt
+
+            - name: Run daily pipeline
+              env:
+                  VLLM_ENDPOINT: ${{ secrets.VLLM_ENDPOINT }}
+                  VLLM_MODEL: ${{ secrets.VLLM_MODEL }}
+                  AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+                  AZURE_OPENAI_KEY: ${{ secrets.AZURE_OPENAI_KEY }}
+                  AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+                  SEMANTIC_SCHOLAR_KEY: ${{ secrets.SEMANTIC_SCHOLAR_KEY }}
+                  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+                  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+              run: python -m src.main
+
+            - name: Deploy to GitHub Pages
+              uses: peaceiris/actions-gh-pages@v3
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_dir: ./site
+                  publish_branch: gh-pages
+                  keep_files: true
+                  commit_message: "digest: $(date +%Y-%m-%d)"
