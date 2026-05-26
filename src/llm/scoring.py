@@ -4,6 +4,8 @@ import json
 import re
 from typing import Dict, List
 
+from tqdm import tqdm
+
 from . import client
 from .prompts import SCORING_PROMPT
 
@@ -32,7 +34,7 @@ def score_papers_batch(
 ) -> Dict[str, Dict]:
     """Score papers for relevance in batches. Returns dict keyed by arxiv_id."""
     scores: Dict[str, Dict] = {}
-    for i in range(0, len(papers), BATCH_SIZE):
+    for i in tqdm(range(0, len(papers), BATCH_SIZE), desc="Scoring batches"):
         batch = papers[i : i + BATCH_SIZE]
         papers_text = "\n\n".join(
             f"ArXiv ID: {p['arxiv_id']}\n"

@@ -1,5 +1,35 @@
 """All LLM prompt templates."""
 
+GITHUB_TRENDING_PROMPT = """You are a technical curator selecting GitHub repositories for an AI/ML research digest.
+
+Repository:
+  Name:        {name}
+  Description: {description}
+  Language:    {language}
+  Topics:      {topics}
+  Stars:       {stars}
+  README:      {readme}
+
+User interests: {interests}
+
+Score relevance 1–5:
+  1 = unrelated to AI/ML/tech interests
+  2 = tangentially related
+  3 = moderately relevant
+  4 = highly relevant (implements or studies a key interest area)
+  5 = must-see (directly advances a core interest)
+
+Topic categories: {topic_categories}
+
+Return ONLY this JSON (no markdown, no extra text):
+{{
+  "relevance": <1-5>,
+  "topic_category": "one category from the list above",
+  "summary": "2-3 sentences: what this repo does and why it is relevant",
+  "tags": "comma-separated tags (3-5 tags)"
+}}"""
+
+
 SCORING_PROMPT = """You are a research assistant curating AI/ML papers for a personal digest.
 
 Score each paper's relevance on a scale of 1–5:
@@ -74,9 +104,25 @@ Top news this week:
 Write only the paragraph, no title or preamble."""
 
 
-THEME_SENTENCE_PROMPT = """In one short sentence (max 15 words), capture the main theme of today's AI/tech digest.
+DIGEST_SUMMARY_PROMPT = """You are a technical editor writing a concise overview of today's AI/ML digest. Use plain, analytical language.
 
-Today's items:
+Today's papers and news:
 {items}
 
-Write only the sentence."""
+Write a structured Markdown summary in this format:
+
+Begin with 1–2 sentences capturing the dominant theme across today's content (what unifying trend or focus stands out?).
+
+**Research highlights:**
+- **[Topic name]**: one sentence on what papers in this area are doing
+- (3–5 bullets for topics present in today's papers)
+
+**Tech buzz:**
+- one sentence on a notable news item or trend
+- (2–3 bullets — omit this entire section if no news items are present)
+
+Rules:
+- Write actual content — do not echo these instructions
+- Do not mention specific paper titles or URLs
+- Bold every topic name in bullets (e.g. **LLMs**, **Robotics**)
+- Output only the Markdown, no preamble or explanation"""

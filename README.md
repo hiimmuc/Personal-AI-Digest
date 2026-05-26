@@ -94,8 +94,9 @@ The system runs entirely on a **self-hosted GitHub Actions runner**, so the SQLi
 | Component | Detail |
 |---|---|
 | **Primary** | Self-hosted [vLLM](https://github.com/vllm-project/vllm) endpoint — any OpenAI-compatible model |
-| **Fallback** | Azure OpenAI — automatically used if the primary call times out or errors |
-| **Routing** | Single `try/except` wrapping one HTTP call — no circuit breaker complexity |
+| **Fallback 1** | Local [Ollama](https://ollama.com) — used if vLLM is unavailable; endpoint and model configurable via `OLLAMA_ENDPOINT` / `OLLAMA_MODEL` env vars |
+| **Fallback 2** | Azure OpenAI — last resort if both primary and Ollama fail |
+| **Routing** | Sequential `try/except` per tier — no circuit breaker complexity |
 | **Deep model** | ArXiv insight generation pass — higher quality, used once per paper |
 | **Fast model** | Relevance scoring and news summarisation — throughput-optimised |
 
@@ -133,7 +134,7 @@ ai-digest-daily/
 │   │   └── database.py          ← SQLite init, upsert, dedup helpers
 │   │
 │   ├── llm/
-│   │   ├── client.py            ← primary vLLM → Azure fallback routing
+│   │   ├── client.py            ← primary vLLM → Ollama → Azure fallback routing
 │   │   ├── prompts.py           ← all prompt templates (scoring, insights, news, narrative)
 │   │   └── scoring.py           ← batched relevance scoring + JSONL parser
 │   │
@@ -160,7 +161,7 @@ ai-digest-daily/
 │   └── assets/js/progress.js   ← 8-line scroll progress bar
 │
 ├── .github/workflows/
-│   ├── daily.yml                ← cron 06:00 UTC, self-hosted runner
+│   ├── daily.yml                ← cron 03:00 UTC (10:00 UTC+7), self-hosted runner
 │   └── weekly.yml               ← cron Sunday 20:00 UTC, self-hosted runner
 │
 ├── digest/                      ← gitignored; SQLite DB lives here
@@ -257,11 +258,15 @@ complete(prompt)
     ├─ try: POST vLLM endpoint (self-hosted)
     │        └─ success → return response
     │
-    └─ except: POST Azure OpenAI
+    ├─ except: POST Ollama (localhost:11434, fallback 1)
+    │           └─ success → return response
+    │
+    └─ except: POST Azure OpenAI (fallback 2)
                └─ return response
 ```
 
-No retry loops, no circuit breaker — one try/except wrapping one HTTP call. Simple and auditable.
+No retry loops, no circuit breaker — sequential `try/except` per tier. Simple and auditable.
+Ollama endpoint and model are configurable via `OLLAMA_ENDPOINT` and `OLLAMA_MODEL` env vars (defaults: `http://localhost:11434/v1`, `qwen2.5:7b`).
 
 ---
 
@@ -286,7 +291,8 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Edit .env — minimum required: AZURE_OPENAI_* keys
-# VLLM_ENDPOINT is optional; the pipeline falls back to Azure automatically
+# VLLM_ENDPOINT is optional; falls back to Ollama then Azure automatically
+# OLLAMA_ENDPOINT / OLLAMA_MODEL are optional (defaults: localhost:11434, qwen2.5:7b)
 ```
 
 ### 3. Configure preferences
@@ -320,15 +326,66 @@ cd site && bundle install && bundle exec jekyll serve
 
 ### 5. GitHub Actions (automated)
 
-Set the following repository secrets, configure a self-hosted runner, and both workflows trigger automatically:
+#### Automated Run Flow
 
-| Secret | Description |
-|---|---|
-| `VLLM_ENDPOINT` | Self-hosted vLLM base URL |
-| `VLLM_MODEL` | Model name on the vLLM instance |
-| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI resource URL |
-| `AZURE_OPENAI_KEY` | Azure API key |
-| `AZURE_OPENAI_MODEL` | Deployment name (e.g. `gpt-4o`) |
-| `SEMANTIC_SCHOLAR_KEY` | S2 API key (optional, avoids rate limits) |
-| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
-| `TELEGRAM_CHAT_ID` | Target chat or channel ID |
+```text
+Cron trigger (GitHub Actions)
+        ↓
+Self-hosted runner wakes up
+        ↓
+main.py runs both pipelines
+        ↓
+SQLite updated
+        ↓
+Markdown digest generated
+        ↓
+Committed to gh-pages branch
+        ↓
+GitHub Pages deploys automatically
+        ↓
+Telegram push sent
+```
+
+#### Self-Hosted Runner Setup
+
+The pipeline requires a **self-hosted runner** so that the SQLite database persists between runs (GitHub-hosted runners are ephemeral and would lose the DB on every run).
+
+1. **Register a runner** on your machine:
+
+   ```bash
+   # Download from: Settings → Actions → Runners → New self-hosted runner
+   mkdir actions-runner && cd actions-runner
+   curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/latest/download/actions-runner-linux-x64.tar.gz
+   tar xzf actions-runner-linux-x64.tar.gz
+   ./config.sh --url https://github.com/<owner>/<repo> --token <RUNNER_TOKEN>
+   ```
+
+2. **Install as a systemd service** so it survives reboots:
+
+   ```bash
+   sudo ./svc.sh install
+   sudo ./svc.sh start
+   # Check status
+   sudo ./svc.sh status
+   ```
+
+3. **Verify** the runner appears as **Idle** under *Settings → Actions → Runners* in your repository.
+
+> The workflows use `runs-on: self-hosted` — GitHub will route all scheduled jobs to this runner automatically.
+
+#### Repository Secrets
+
+Set the following secrets under *Settings → Secrets and variables → Actions*:
+
+| Secret | Required | Description |
+|---|---|---|
+| `VLLM_ENDPOINT` | Optional | Self-hosted vLLM base URL |
+| `VLLM_MODEL` | Optional | Model name on the vLLM instance |
+| `OLLAMA_ENDPOINT` | Optional | Ollama base URL (default: `http://localhost:11434/v1`) |
+| `OLLAMA_MODEL` | Optional | Ollama model name (default: `qwen2.5:7b`) |
+| `AZURE_OPENAI_ENDPOINT` | Required | Azure OpenAI resource URL |
+| `AZURE_OPENAI_KEY` | Required | Azure API key |
+| `AZURE_OPENAI_MODEL` | Required | Deployment name (e.g. `gpt-4o`) |
+| `SEMANTIC_SCHOLAR_KEY` | Optional | S2 API key (avoids rate limits) |
+| `TELEGRAM_BOT_TOKEN` | Optional | Bot token from @BotFather |
+| `TELEGRAM_CHAT_ID` | Optional | Target chat or channel ID |

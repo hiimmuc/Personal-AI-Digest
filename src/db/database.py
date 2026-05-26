@@ -32,14 +32,21 @@ def init_db():
                 digest_date   TEXT,
                 digest_week   INTEGER,
                 code_url      TEXT DEFAULT '',
+                discovery_type TEXT DEFAULT 'subject',
+                search_topic  TEXT DEFAULT '',
                 embedding     BLOB
             )
         """)
-        # Migration: add code_url to existing DBs that predate this column
-        try:
-            conn.execute("ALTER TABLE papers ADD COLUMN code_url TEXT DEFAULT ''")
-        except Exception:
-            pass  # column already exists
+        # Migrations: add columns to existing DBs
+        for col, definition in [
+            ("code_url", "TEXT DEFAULT ''"),
+            ("discovery_type", "TEXT DEFAULT 'subject'"),
+            ("search_topic", "TEXT DEFAULT ''"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE papers ADD COLUMN {col} {definition}")
+            except Exception:
+                pass  # column already exists
         conn.execute("""
             CREATE TABLE IF NOT EXISTS news_items (
                 url           TEXT PRIMARY KEY,
@@ -83,8 +90,8 @@ def upsert_paper(paper: dict):
             INSERT OR REPLACE INTO papers
             (arxiv_id, title, authors, abstract, categories, topic_category,
              relevance, insights, published_date, fetched_date, digest_date, digest_week,
-             code_url, embedding)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+             code_url, discovery_type, search_topic, embedding)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
             """,
             (
                 paper["arxiv_id"],
@@ -100,6 +107,8 @@ def upsert_paper(paper: dict):
                 today,
                 week,
                 paper.get("code_url", ""),
+                paper.get("discovery_type", "subject"),
+                paper.get("search_topic", ""),
             ),
         )
         conn.commit()

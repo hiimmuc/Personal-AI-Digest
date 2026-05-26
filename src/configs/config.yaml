@@ -1,30 +1,48 @@
 arxiv:
+    # ArXiv subject categories — RSS-based global trend discovery
     categories:
         - cs.AI
         - cs.LG
         - cs.RO
         - cs.CV
         - cs.CL
+        - cs.HC
+
+    # User interest topics — keyword search–based personalized discovery
+    topic_interests:
+        - Multi-Agent Systems
+        - Embodied AI
+        - Vision-Language Models
+        - 3D Scene Graph
+        - Vision-Language Navigation
+        - Human-Computer Interaction
+
     max_papers_per_day: 20
+    max_topic_papers: 10 # cap per interest topic
+    days_back: 3 # only include papers published within this many days
     relevance_cutoff: 2 # drop papers below this score
-    hindex_cutoff: 10 # Semantic Scholar h-index prefilter
+    # hindex_cutoff: 10 # Semantic Scholar h-index prefilter (experimental, not currently used)
     author_watchlist: configs/authors.txt
     interests: >
         AI, machine learning, large language models, computer vision,
         robotics, reinforcement learning, multimodal learning,
-        foundation models, generative models
+        foundation models, generative models, Human-Computer Interaction, AI safety, Agentic AI, MLOps, NLP, speech, computing systems, general
 
 topic_categories:
     - LLM
     - Computer Vision
     - Robotics
-    - Speech
     - RL
     - MLOps
+    - NLP
+    - Speech
+    - AI Safety
+    - Agentic AI
+    - Computing Systems
     - General
 
 news:
-    relevance_cutoff: 2
+    relevance_cutoff: 3
     sources:
         - name: Hacker News
           type: rss
@@ -38,24 +56,60 @@ news:
           type: rss
           url: https://www.reddit.com/r/MachineLearning/.rss
           enabled: true
-        - name: Reddit r/LocalLLaMA
+        - name: Reddit r/ArtificialIntelligence
           type: rss
-          url: https://www.reddit.com/r/LocalLLaMA/.rss
+          url: https://www.reddit.com/r/artificial/.rss
           enabled: true
-        - name: The Gradient
+        - name: Reddit r/DeepLearning
           type: rss
-          url: https://thegradient.pub/rss/
+          url: https://www.reddit.com/r/deeplearning/.rss
           enabled: true
-        - name: Hugging Face Blog
+        - name: Reddit r/NVidiaAI
           type: rss
-          url: https://huggingface.co/blog/feed.xml
+          url: https://www.reddit.com/r/NvidiaAI/.rss
           enabled: true
+        # - name: Reddit r/LocalLLaMA
+        #   type: rss
+        #   url: https://www.reddit.com/r/LocalLLaMA/.rss
+        #   enabled: true
+        # - name: The Gradient
+        #   type: rss
+        #   url: https://thegradient.pub/rss/
+        #   enabled: true
+        # - name: Hugging Face Blog
+        #   type: rss
+        #   url: https://huggingface.co/blog/feed.xml
+        #   enabled: true
 
 delivery:
     telegram_enabled: true
     github_pages_repo: hiimmuc/ai-digest-daily
-    daily_time_utc: "06:00"
+    daily_time_utc: "10:00+07:00"
     weekly_day: Sunday
+
+github_trending:
+    enabled: true
+    since: daily # daily | weekly | monthly
+    languages:
+        - "" # "" = all languages
+        - python
+        - jupyter-notebook
+    relevance_cutoff: 3 # drop repos below this LLM score
+    max_repos: 15 # cap before LLM calls (post keyword-match)
+    # Additional keywords for GitHub repo name/description matching
+    # (merged with arxiv topic_interests + interests for Stage 1 filter)
+    keywords:
+        - llm
+        - rag
+        - agents
+        - transformer
+        - diffusion
+        - embedding
+        - vector
+        - chatbot
+        - fine-tuning
+        - deep learning
+        - multimodal
 
 site:
     title: "AI Digest"

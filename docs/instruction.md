@@ -132,7 +132,7 @@ Jekyll + Minimal Mistakes — same as portfolio at <https://hiimmuc.github.io/>.
 
 ### Routes
 
-```
+```text
 /                   → Today's digest (default landing)
 /archive/           → Reverse chronological digest index
 /weekly/            → Weekly rollup pages
@@ -224,7 +224,7 @@ If all animations were removed, the site would still feel complete. That is the 
 
 Mirrors the portfolio blog year-archive. Grouped by month, one line per digest:
 
-```
+```text
 May 2026
   23 May — Daily Digest     (8 papers · 6 news)
   Week 21 — Weekly Rollup

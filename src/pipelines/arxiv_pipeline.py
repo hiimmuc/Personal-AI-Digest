@@ -1,16 +1,14 @@
-"""ArXiv pipeline: fetch → dedup → h-index filter → LLM score → LLM insights → DB."""
+"""ArXiv pipeline: fetch → dedup → LLM score → LLM insights → DB."""
 
 import json
-import os
 import re
 import time
 from datetime import datetime, timedelta
 from html import unescape
-from pathlib import Path
 from typing import Dict, List
 
 import feedparser
-import requests
+from tqdm import tqdm
 
 from ..db import database
 from ..llm import client as llm_client
@@ -18,7 +16,31 @@ from ..llm.prompts import INSIGHTS_PROMPT
 from ..llm.scoring import score_papers_batch
 
 # ---------------------------------------------------------------------------
-# ArXiv RSS fetch
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_entry_categories(entry, fallback: str = "") -> str:
+    """Return space-joined, deduplicated ArXiv category codes from a feed entry."""
+    cats = []
+    for tag in entry.get("tags", []):
+        term = tag.get("term", "")
+        if term and "." in term:  # ArXiv codes always contain a dot
+            cats.append(term)
+    if not cats:
+        primary = entry.get("category", fallback)
+        if primary:
+            cats = [primary]
+    seen, unique = set(), []
+    for c in cats:
+        if c not in seen:
+            seen.add(c)
+            unique.append(c)
+    return " ".join(unique) or fallback
+
+
+# ---------------------------------------------------------------------------
+# ArXiv RSS fetch  (subject-based — global trends)
 # ---------------------------------------------------------------------------
 
 
@@ -47,116 +69,153 @@ def fetch_arxiv_rss(category: str) -> List[Dict]:
         ]
         abstract = unescape(re.sub("<[^<]+?>", "", entry.get("summary", "")).replace("\n", " "))
         title = re.sub(r"\(arXiv:[0-9.]+v[0-9]+ \[.*?\]\)$", "", entry.title).strip()
-        published = entry.get("published", "")[:10]
+        pub_raw = entry.get("published", "")
+        try:
+            published = datetime.strptime(pub_raw[:10], "%Y-%m-%d").strftime("%Y-%m-%d")
+        except ValueError:
+            published = datetime.utcnow().strftime("%Y-%m-%d")
+        categories = _get_entry_categories(entry, fallback=category)
         papers.append(
             {
                 "arxiv_id": arxiv_id,
                 "title": title,
                 "authors": ", ".join(authors),
                 "abstract": abstract,
-                "categories": category,
+                "categories": categories,
                 "published_date": published,
+                "discovery_type": "subject",
+                "search_topic": "",
             }
         )
     return papers
 
 
 # ---------------------------------------------------------------------------
-# Semantic Scholar helpers
+# ArXiv keyword search  (topic-based — personalized discovery)
 # ---------------------------------------------------------------------------
 
 
-def _s2_headers(api_key: str) -> Dict:
-    return {"X-API-KEY": api_key} if api_key else {}
+def fetch_arxiv_by_topic(topic: str, days_back: int = 3, max_results: int = 20) -> List[Dict]:
+    """Search ArXiv for recent papers matching a user interest topic.
 
+    Uses targeted ti:/abs: phrase search + submittedDate range filter to keep
+    result sets small and avoid rate-limiting (HTTP 429).
 
-def fetch_author_hindex(author_names: List[str], api_key: str) -> Dict[str, int]:
-    """Return {author_name: max_hIndex} from Semantic Scholar author search."""
-    hindex_map: Dict[str, int] = {}
-    session = requests.Session()
-    sleep_sec = 0.05 if api_key else 1.0
-    for name in author_names:
-        try:
-            resp = session.get(
-                "https://api.semanticscholar.org/graph/v1/author/search",
-                params={"query": name, "fields": "authorId,name,hIndex", "limit": "5"},
-                headers=_s2_headers(api_key),
-                timeout=10,
-            )
-            resp.raise_for_status()
-            data = resp.json().get("data", [])
-            if data:
-                hindex_map[name] = max((a.get("hIndex") or 0 for a in data), default=0)
-        except Exception as e:
-            print(f"  S2 lookup failed for '{name}': {e}")
-        time.sleep(sleep_sec)
-    return hindex_map
-
-
-def filter_by_hindex(papers: List[Dict], hindex_map: Dict[str, int], cutoff: int) -> List[Dict]:
-    """Keep papers where at least one author has h-index >= cutoff."""
-    result = []
-    for paper in papers:
-        authors = [a.strip() for a in paper["authors"].split(",")]
-        max_h = max((hindex_map.get(a, 0) for a in authors), default=0)
-        if max_h >= cutoff:
-            result.append(paper)
-    return result
-
-
-def load_watched_author_ids(authors_txt: Path) -> set:
-    """Load Semantic Scholar author IDs from authors.txt (name, s2_id per line)."""
-    ids = set()
-    if not authors_txt.exists():
-        return ids
-    for line in authors_txt.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split(",")
-        if len(parts) >= 2:
-            ids.add(parts[1].strip())
-    return ids
-
-
-# ---------------------------------------------------------------------------
-# Papers With Code — code repo lookup
-# ---------------------------------------------------------------------------
-
-
-def find_code_repo(arxiv_id: str) -> str:
-    """Query Papers With Code for the top code repository of a paper.
-
-    Returns the GitHub URL (most-starred, official preferred) or empty string.
+    API docs: https://info.arxiv.org/help/api/user-manual.html#query_details
+    Equivalent browser URL: https://arxiv.org/search/?query=<topic>&searchtype=all
     """
-    clean_id = re.sub(r"v\d+$", "", arxiv_id)  # strip version suffix e.g. 2301.07543v2
-    try:
-        resp = requests.get(
-            "https://paperswithcode.com/api/v1/papers/",
-            params={"arxiv_id": clean_id},
-            timeout=8,
+    # Quoted phrase in title OR abstract — much more precise than all:topic.
+    # Spaces become +, quotes URL-encoded as %22, parens as %28/%29.
+    topic_safe = topic.replace(" ", "+")
+    phrase = f"%22{topic_safe}%22"
+
+    # submittedDate range in YYYYMMDDTTTT format (TTTT = HHMM, GMT)
+    date_from = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y%m%d0000")
+    date_to = datetime.utcnow().strftime("%Y%m%d2359")
+
+    search_query = (
+        f"%28ti:{phrase}+OR+abs:{phrase}%29" f"+AND+submittedDate:[{date_from}+TO+{date_to}]"
+    )
+    url = (
+        f"https://export.arxiv.org/api/query"
+        f"?search_query={search_query}"
+        f"&sortBy=submittedDate&sortOrder=descending"
+        f"&max_results={max_results}"
+    )
+
+    # ArXiv requests >= 3 s between consecutive API calls
+    time.sleep(3)
+
+    def _call():
+        try:
+            return feedparser.parse(url)
+        except Exception as e:
+            print(f"  Network error for '{topic}': {e}")
+            return None
+
+    feed = _call()
+    if feed is None:
+        return []
+
+    status = getattr(feed, "status", 200)
+    if status == 429:
+        print(f"  Rate-limited (429) for '{topic}', waiting 60 s then retrying...")
+        time.sleep(60)
+        feed = _call()
+        if feed is None:
+            return []
+        status = getattr(feed, "status", 200)
+
+    if status not in (200, 304):
+        print(f"  ArXiv API returned HTTP {status} for '{topic}', skipping")
+        return []
+
+    cutoff = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    papers = []
+    for entry in feed.entries:
+        # Atom id looks like https://arxiv.org/abs/2605.12345v1
+        arxiv_id = entry.get("id", "").rstrip("/").split("/")[-1].split("v")[0]
+        if not arxiv_id:
+            continue
+
+        pub_raw = entry.get("published", "")
+        try:
+            published = datetime.strptime(pub_raw[:10], "%Y-%m-%d").strftime("%Y-%m-%d")
+        except ValueError:
+            published = datetime.utcnow().strftime("%Y-%m-%d")
+
+        # Belt-and-suspenders: API date filter handles most, but double-check
+        if published < cutoff:
+            continue
+
+        categories = _get_entry_categories(entry, fallback="cs.AI")
+
+        if entry.get("authors"):
+            authors = ", ".join(a.get("name", "") for a in entry.authors)
+        else:
+            authors = unescape(re.sub("<[^<]+?>", "", entry.get("author", ""))).strip()
+
+        abstract = unescape(re.sub("<[^<]+?>", "", entry.get("summary", "")).replace("\n", " "))
+        title = unescape(re.sub("<[^<]+?>", "", entry.get("title", ""))).strip()
+
+        papers.append(
+            {
+                "arxiv_id": arxiv_id,
+                "title": title,
+                "authors": authors,
+                "abstract": abstract,
+                "categories": categories,
+                "published_date": published,
+                "discovery_type": "topic",
+                "search_topic": topic,
+            }
         )
-        resp.raise_for_status()
-        results = resp.json().get("results", [])
-        if not results:
-            return ""
-        pwc_id = results[0]["id"]
-        repo_resp = requests.get(
-            f"https://paperswithcode.com/api/v1/papers/{pwc_id}/repositories/",
-            timeout=8,
-        )
-        repo_resp.raise_for_status()
-        repos = repo_resp.json().get("results", [])
-        if not repos:
-            return ""
-        # Prefer official repos; within each group sort by stars descending
-        official = [r for r in repos if r.get("is_official")]
-        pool = official if official else repos
-        pool.sort(key=lambda r: r.get("stars", 0), reverse=True)
-        return pool[0].get("url", "")
-    except Exception as e:
-        print(f"  PWC lookup failed for {arxiv_id}: {e}")
+    return papers
+
+
+# ---------------------------------------------------------------------------
+# Code detection — scan abstract for GitHub URLs
+# ---------------------------------------------------------------------------
+
+_GITHUB_URL_RE = re.compile(
+    r"https?://github\.com/[\w][\w.-]*/[\w][\w.-]*(?:/[\w./-]*)?",
+    re.IGNORECASE,
+)
+# Characters that should never end a URL when extracted from prose
+_URL_TRAILING_JUNK = re.compile(r"[.\,;:!?\)\]>\"\']+$")
+
+
+def find_code_repo(abstract: str) -> str:
+    """Return the first valid GitHub URL found in the abstract, or empty string."""
+    match = _GITHUB_URL_RE.search(abstract)
+    if not match:
         return ""
+    url = _URL_TRAILING_JUNK.sub("", match.group(0))
+    # Basic validation: must have a non-empty owner and repo segment
+    parts = url.rstrip("/").split("/")  # ['https:', '', 'github.com', owner, repo, ...]
+    if len(parts) < 5 or not parts[3] or not parts[4]:
+        return ""
+    return url
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +228,9 @@ def generate_insights(paper: Dict) -> Dict:
     prompt = INSIGHTS_PROMPT.format(
         title=paper["title"],
         authors=paper["authors"],
-        abstract=paper["abstract"][:3000],
+        abstract=paper["abstract"][
+            :3000
+        ],  # Truncate to fit within token limits (4096) after prompt
     )
     try:
         raw = llm_client.complete(prompt)
@@ -190,20 +251,18 @@ def run(config: dict) -> List[Dict]:
     """Execute the full ArXiv pipeline and return saved papers."""
     arxiv_cfg = config["arxiv"]
     categories: List[str] = arxiv_cfg["categories"]
-    hindex_cutoff: int = arxiv_cfg.get("hindex_cutoff", 10)
+    topic_interests: List[str] = arxiv_cfg.get("topic_interests", [])
     relevance_cutoff: int = arxiv_cfg.get("relevance_cutoff", 2)
     max_papers: int = arxiv_cfg.get("max_papers_per_day", 30)
+    max_topic_papers: int = arxiv_cfg.get("max_topic_papers", 10)
+    days_back: int = arxiv_cfg.get("days_back", 3)
     interests: str = arxiv_cfg.get(
         "interests",
         "AI, machine learning, computer vision, robotics, NLP",
     )
     topic_categories: List[str] = config["topic_categories"]
-    s2_key: str = os.environ.get("SEMANTIC_SCHOLAR_KEY", "")
 
-    authors_txt = Path(__file__).parent.parent / "configs" / "authors.txt"
-    watched_ids = load_watched_author_ids(authors_txt)
-
-    # 1. Fetch from all categories, deduplicate across categories
+    # ── 1. Subject-based fetch (RSS, global trends) ──────────────────────────
     seen_ids: set = set()
     all_papers: List[Dict] = []
     for cat in categories:
@@ -211,61 +270,82 @@ def run(config: dict) -> List[Dict]:
             if paper["arxiv_id"] not in seen_ids:
                 seen_ids.add(paper["arxiv_id"])
                 all_papers.append(paper)
-    print(f"Fetched {len(all_papers)} papers from ArXiv RSS")
+    print(f"Fetched {len(all_papers)} papers from ArXiv RSS (subjects)")
 
-    # 2. Skip already-processed papers
+    # ── 2. Topic-based fetch (search API, personalized) ──────────────────────
+    topic_papers_raw: List[Dict] = []
+    if topic_interests:
+        print(f"Searching ArXiv for {len(topic_interests)} interest topics...")
+        for topic in topic_interests:
+            results = fetch_arxiv_by_topic(
+                topic, days_back=days_back, max_results=max_topic_papers
+            )
+            added = 0
+            for paper in results:
+                if paper["arxiv_id"] not in seen_ids:
+                    seen_ids.add(paper["arxiv_id"])
+                    topic_papers_raw.append(paper)
+                    added += 1
+            print(f"  '{topic}': {added} new papers")
+        print(f"Fetched {len(topic_papers_raw)} papers from topic search")
+        all_papers.extend(topic_papers_raw)
+
+    # ── 3. Dedup against DB ──────────────────────────────────────────────────
     new_papers = [p for p in all_papers if not database.paper_exists(p["arxiv_id"])]
     print(f"{len(new_papers)} new (not in DB)")
     if not new_papers:
         return []
 
-    # 3. H-index filter via Semantic Scholar
-    all_authors = list({a.strip() for p in new_papers for a in p["authors"].split(",")})
-    print(f"Fetching h-index for {len(all_authors)} authors...")
-    hindex_map = fetch_author_hindex(all_authors, s2_key)
-    new_papers = filter_by_hindex(new_papers, hindex_map, hindex_cutoff)
-    print(f"{len(new_papers)} papers pass h-index filter (>= {hindex_cutoff})")
+    # ── 4. Recency filter (subject papers only; topic search already filtered) ─
+    date_cutoff = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    new_papers = [
+        p
+        for p in new_papers
+        if p.get("discovery_type") == "topic" or p.get("published_date", "") >= date_cutoff
+    ]
+    print(f"{len(new_papers)} papers within last {days_back} days (since {date_cutoff})")
     if not new_papers:
         return []
 
-    # 4. LLM pass 1: relevance scoring (batched)
-    print("Scoring papers for relevance...")
-    scores = score_papers_batch(new_papers, topic_categories, interests)
+    # ── 5. LLM pass 1: relevance scoring (subject papers) ───────────────────
+    subject_papers = [p for p in new_papers if p.get("discovery_type") != "topic"]
+    topic_p = [p for p in new_papers if p.get("discovery_type") == "topic"]
 
-    # 5. Apply watched-author boost, filter below cutoff
     scored: List[Dict] = []
-    for paper in new_papers:
-        score_data = scores.get(paper["arxiv_id"], {})
-        relevance = int(score_data.get("relevance", 1))
-        # Boost papers by watched authors
-        if watched_ids:
-            authors = [a.strip() for a in paper["authors"].split(",")]
-            if any(a in watched_ids for a in authors):
-                relevance = max(relevance, 3)
-        if relevance < relevance_cutoff:
-            continue
-        paper["relevance"] = relevance
-        paper["topic_category"] = score_data.get("topic_category", "")
+
+    if subject_papers:
+        print("Scoring subject papers for relevance...")
+        scores = score_papers_batch(subject_papers, topic_categories, interests)
+        for paper in subject_papers:
+            score_data = scores.get(paper["arxiv_id"], {})
+            relevance = int(score_data.get("relevance", 1))
+            if relevance < relevance_cutoff:
+                continue
+            paper["relevance"] = relevance
+            paper["topic_category"] = score_data.get("topic_category", "General")
+            scored.append(paper)
+        print(f"{len(scored)} subject papers pass relevance cutoff (>= {relevance_cutoff})")
+        scored = scored[:max_papers]
+
+    # Topic papers: use search topic as category; assign default relevance
+    for paper in topic_p:
+        paper["relevance"] = 3  # implicit relevance (user chose the topic)
+        paper["topic_category"] = paper.get("search_topic", "General")
         scored.append(paper)
 
-    print(f"{len(scored)} papers pass relevance cutoff (>= {relevance_cutoff})")
-    scored = scored[:max_papers]
-
-    # 6. Check Papers With Code for code availability
-    print("Checking Papers With Code for code repos...")
+    # ── 6. Detect code repos from abstract ──────────────────────────────────
     for paper in scored:
-        paper["code_url"] = find_code_repo(paper["arxiv_id"])
+        paper["code_url"] = find_code_repo(paper.get("abstract", ""))
         if paper["code_url"]:
             print(f"  Code: {paper['arxiv_id']} → {paper['code_url']}")
-        time.sleep(0.2)  # be polite to PWC API
 
-    # 7. LLM pass 2: generate insights per paper
-    for paper in scored:
-        print(f"  Insights: {paper['title'][:60]}...")
+    # ── 7. LLM pass 2: generate insights ────────────────────────────────────
+    for paper in tqdm(scored, desc="Generating insights"):
+        # print(f"  Insights: {paper['title'][:60]}...")
         paper["insights"] = generate_insights(paper)
 
-    # 8. Write to SQLite
-    for paper in scored:
+    # ── 8. Write to SQLite ───────────────────────────────────────────────────
+    for paper in tqdm(scored, desc="Saving to database"):
         database.upsert_paper(paper)
     print(f"Saved {len(scored)} papers to database")
 

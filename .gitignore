@@ -246,3 +246,6 @@ references/
 .vscode/settings.json
 .idea/
 .vscode/
+
+# Personal
+docs/*
