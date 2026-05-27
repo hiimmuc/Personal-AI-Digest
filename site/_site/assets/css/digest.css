@@ -1,0 +1,70 @@
+/* Reading progress bar */
+#progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: var(--accent-color, #0366d6);
+    z-index: 9999;
+    transition: width 0.1s linear;
+}
+
+/* Page load fade-in */
+.page__content {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* details expand: smooth open */
+details>div,
+details>p {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+details[open]>div,
+details[open]>p {
+    max-height: 2000px;
+}
+
+/* details left-border accent when open */
+details[open] {
+    border-left: 2px solid var(--accent-color, #0366d6);
+    padding-left: 0.75rem;
+}
+
+/* Tag hover */
+code {
+    transition: background 0.15s ease;
+    cursor: default;
+}
+
+code:hover {
+    background: var(--accent-color, #0366d6);
+    color: #fff;
+}
+
+/* Paper and news items */
+.paper-item,
+.news-item {
+    margin-bottom: 1.5rem;
+}
+
+/* Relevance dots */
+.paper-item strong:first-child {
+    font-family: monospace;
+    letter-spacing: 0.05em;
+}

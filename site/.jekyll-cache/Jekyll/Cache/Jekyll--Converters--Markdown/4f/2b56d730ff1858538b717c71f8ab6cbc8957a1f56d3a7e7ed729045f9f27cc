@@ -1,0 +1,348 @@
+I"�,<div class="listing-header">
+  <h1 class="listing-title">
+    <span class="listing-icon" aria-hidden="true">🔥</span>
+    GitHub Trending
+  </h1>
+  <p class="listing-subtitle">Daily trending repositories filtered &amp; scored for AI/ML relevance</p>
+  
+  <div class="listing-stats">
+    <span class="stat-pill">
+      <strong>2</strong> digests
+    </span>
+    
+    
+    <span class="stat-pill">
+      <strong>22</strong> repos tracked
+    </span>
+  </div>
+</div>
+
+<!-- ── Trend Charts ─────────────────────────────────────────── -->
+
+<div class="trend-charts-section">
+
+  <div class="trend-charts-grid">
+
+    <!-- Repos per Day bar chart -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-icon" aria-hidden="true">📊</span>
+        <h3 class="chart-card-title">Repos per Day</h3>
+      </div>
+      <div class="chart-container">
+        <canvas id="reposPerDayChart" aria-label="Repos per day bar chart" role="img"></canvas>
+      </div>
+    </div>
+
+    <!-- Topic distribution doughnut chart -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-card-icon" aria-hidden="true">🏷️</span>
+        <h3 class="chart-card-title">Topic Distribution</h3>
+      </div>
+      <div class="chart-container">
+        <canvas id="topicDistChart" aria-label="Topic distribution doughnut chart" role="img"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Chart data injected from Jekyll/Liquid -->
+<script>
+  window._trendingChartData = (function () {
+    var reposByDay = {
+      labels: [
+        
+        "May 26",
+        "May 27"
+        
+      ],
+      data: [
+        15,
+        7
+        
+      ]
+    };
+
+    // Collect all topics from all trending posts
+    var topicCounts = {};
+    
+      
+        
+          
+          if (!topicCounts["Agentic AI"]) topicCounts["Agentic AI"] = 0;
+          topicCounts["Agentic AI"]++;
+        
+          
+          if (!topicCounts["Speech"]) topicCounts["Speech"] = 0;
+          topicCounts["Speech"]++;
+        
+          
+          if (!topicCounts["LLM"]) topicCounts["LLM"] = 0;
+          topicCounts["LLM"]++;
+        
+          
+          if (!topicCounts["Computing Systems"]) topicCounts["Computing Systems"] = 0;
+          topicCounts["Computing Systems"]++;
+        
+      
+    
+      
+        
+          
+          if (!topicCounts["Agentic AI"]) topicCounts["Agentic AI"] = 0;
+          topicCounts["Agentic AI"]++;
+        
+          
+          if (!topicCounts["LLM"]) topicCounts["LLM"] = 0;
+          topicCounts["LLM"]++;
+        
+          
+          if (!topicCounts["AI Safety"]) topicCounts["AI Safety"] = 0;
+          topicCounts["AI Safety"]++;
+        
+          
+          if (!topicCounts["General"]) topicCounts["General"] = 0;
+          topicCounts["General"]++;
+        
+          
+          if (!topicCounts["MLOps"]) topicCounts["MLOps"] = 0;
+          topicCounts["MLOps"]++;
+        
+          
+          if (!topicCounts["NLP"]) topicCounts["NLP"] = 0;
+          topicCounts["NLP"]++;
+        
+      
+    
+
+    // Convert to sorted arrays
+    var topicEntries = Object.entries(topicCounts)
+      .sort(function (a, b) { return b[1] - a[1]; })
+      .slice(0, 8);
+    var topicLabels = topicEntries.map(function (e) { return e[0]; });
+    var topicData   = topicEntries.map(function (e) { return e[1]; });
+
+    return { reposByDay: reposByDay, topicLabels: topicLabels, topicData: topicData };
+  })();
+</script>
+
+<!-- ── Digest listing cards ─────────────────────────────────── -->
+<div class="listing-grid">
+
+
+<div class="listing-card listing-card--trending">
+  <div class="listing-card-date">
+    <span class="lc-day">27</span>
+    <span class="lc-mon">May 2026</span>
+  </div>
+  <div class="listing-card-body">
+    
+    <div class="listing-card-meta">
+      
+      <span class="lc-badge lc-badge--trending">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" /></svg>
+        7 repos
+      </span>
+      
+      
+        
+        <span class="lc-badge lc-badge--topic">Agentic AI</span>
+        
+        <span class="lc-badge lc-badge--topic">Speech</span>
+        
+        <span class="lc-badge lc-badge--topic">LLM</span>
+        
+      
+      <span class="lc-badge lc-badge--date">Wednesday, May 27</span>
+    </div>
+    <div class="listing-card-actions">
+      <a class="lc-btn lc-btn--primary lc-btn--trending" href="/ai-digest-daily/digest/2026-05-27/#github-trending">
+        View Repos &rarr;
+      </a>
+      <a class="lc-btn lc-btn--ghost" href="/ai-digest-daily/digest/2026-05-27/">
+        Full Digest
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="listing-card listing-card--trending">
+  <div class="listing-card-date">
+    <span class="lc-day">26</span>
+    <span class="lc-mon">May 2026</span>
+  </div>
+  <div class="listing-card-body">
+    
+    <div class="listing-card-meta">
+      
+      <span class="lc-badge lc-badge--trending">
+        <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" /></svg>
+        15 repos
+      </span>
+      
+      
+        
+        <span class="lc-badge lc-badge--topic">Agentic AI</span>
+        
+        <span class="lc-badge lc-badge--topic">LLM</span>
+        
+        <span class="lc-badge lc-badge--topic">AI Safety</span>
+        
+      
+      <span class="lc-badge lc-badge--date">Tuesday, May 26</span>
+    </div>
+    <div class="listing-card-actions">
+      <a class="lc-btn lc-btn--primary lc-btn--trending" href="/ai-digest-daily/digest/2026-05-26/#github-trending">
+        View Repos &rarr;
+      </a>
+      <a class="lc-btn lc-btn--ghost" href="/ai-digest-daily/digest/2026-05-26/">
+        Full Digest
+      </a>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Chart.js + rendering script -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer=""></script>
+
+<script>
+(function () {
+  var CHART_COLORS = [
+    '#0969da','#8250df','#1a7f37','#bf8700','#cf222e',
+    '#0a69da','#6e40c9','#2da44e','#d4a72c','#ff8182',
+    '#54aeff','#bc8cff','#4ac26b','#fbd633','#ffaba8'
+  ];
+
+  function isDark() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  function gridColor() {
+    return isDark() ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  }
+
+  function textColor() {
+    return isDark() ? '#c9d1d9' : '#636e7b';
+  }
+
+  function initCharts() {
+    var d = window._trendingChartData;
+    if (!d || typeof Chart === 'undefined') return;
+
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+
+    // ── Bar chart: repos per day ─────────────────────────────
+    var barCtx = document.getElementById('reposPerDayChart');
+    if (barCtx) {
+      new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: d.reposByDay.labels,
+          datasets: [{
+            label: 'Trending Repos',
+            data: d.reposByDay.data,
+            backgroundColor: 'rgba(9, 105, 218, 0.75)',
+            borderColor: 'rgba(9, 105, 218, 1)',
+            borderWidth: 1,
+            borderRadius: 4,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) { return ' ' + ctx.parsed.y + ' repos'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor() },
+              ticks: { color: textColor(), maxRotation: 45 }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: gridColor() },
+              ticks: { color: textColor(), stepSize: 1, precision: 0 }
+            }
+          }
+        }
+      });
+    }
+
+    // ── Doughnut chart: topic distribution ───────────────────
+    var donutCtx = document.getElementById('topicDistChart');
+    if (donutCtx && d.topicLabels.length > 0) {
+      new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: d.topicLabels,
+          datasets: [{
+            data: d.topicData,
+            backgroundColor: CHART_COLORS.slice(0, d.topicLabels.length),
+            borderWidth: 2,
+            borderColor: isDark() ? '#161b22' : '#ffffff',
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: textColor(),
+                boxWidth: 12,
+                padding: 14,
+                font: { size: 11 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) {
+                  var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+                  var pct = total > 0 ? Math.round(ctx.parsed / total * 100) : 0;
+                  return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    } else if (donutCtx) {
+      donutCtx.parentElement.innerHTML = '<p class="chart-empty">Not enough topic data yet.</p>';
+    }
+  }
+
+  // Chart.js loads deferred – wait for it
+  function waitForChartJS(attempts) {
+    if (typeof Chart !== 'undefined') { initCharts(); return; }
+    if (attempts > 0) setTimeout(function () { waitForChartJS(attempts - 1); }, 250);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { waitForChartJS(20); });
+  } else {
+    waitForChartJS(20);
+  }
+
+  // Re-draw on theme change
+  document.addEventListener('themechange', function () {
+    if (window.Chart) Chart.instances && Object.values(Chart.instances).forEach(function (c) { c.destroy(); });
+    setTimeout(initCharts, 100);
+  });
+})();
+</script>
+
+:ET

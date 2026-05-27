@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="{{ page.description | default: site.description | strip_html | normalize_whitespace | truncate: 160 }}">
+    <meta name="author" content="{{ site.author.name | default: 'AI Digest' }}">
+    <meta property="og:title" content="{{ page.title | default: site.title }}">
+    <meta property="og:description"
+        content="{{ page.description | default: site.description | strip_html | truncate: 160 }}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="{{ page.url | absolute_url }}">
+    <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+    <link rel="icon" href="{{ '/favicon.svg' | relative_url }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ '/assets/css/modern.css'  | relative_url }}">
+    <link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="{{ '/feed.xml' | relative_url }}">
+</head>
+
+<body>
+
+    <!-- Reading progress bar -->
+    <div id="progress" aria-hidden="true"></div>
+
+    <!-- Skip navigation -->
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <!-- ============================================================
+     HEADER
+     ============================================================ -->
+    <header class="site-header" role="banner">
+        <div class="header-inner">
+
+            <!-- Brand / Logo -->
+            <a class="site-brand" href="{{ '/' | relative_url }}" aria-label="{{ site.title }} home">
+                <div class="brand-icon" aria-hidden="true">🤖</div>
+                <div>
+                    <div class="brand-title">AI Digest</div>
+                    <div class="brand-subtitle">Daily Research &amp; Tech</div>
+                </div>
+            </a>
+
+            <!-- Live date badge -->
+            <div class="header-date" aria-label="Today's date">
+                <span class="date-icon" aria-hidden="true">📅</span>
+                <span id="header-date-text">
+                    {%- assign d = site.time | default: 'now' -%}
+                    {{ site.time | date: "%b %-d, %Y" }}
+                </span>
+            </div>
+
+            <div class="header-spacer" aria-hidden="true"></div>
+
+            <!-- Primary nav -->
+            <nav class="site-nav" aria-label="Primary navigation">
+                <a class="nav-link {% if page.url == '/' %}active{% endif %}" href="{{ '/' | relative_url }}">
+                    <span aria-hidden="true">🏠</span> Home
+                </a>
+                <a class="nav-link {% if page.url contains '/papers' %}active{% endif %}"
+                    href="{{ '/papers/' | relative_url }}">
+                    <span aria-hidden="true">📄</span> Papers
+                </a>
+                <a class="nav-link {% if page.url contains '/news' %}active{% endif %}"
+                    href="{{ '/news/' | relative_url }}">
+                    <span aria-hidden="true">📰</span> News
+                </a>
+                <a class="nav-link {% if page.url contains '/trending' %}active{% endif %}"
+                    href="{{ '/trending/' | relative_url }}">
+                    <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" width="16" height="16"
+                        style="vertical-align:-3px">
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                    </svg> Repos
+                </a>
+                <a class="nav-link {% if page.url contains '/archive' %}active{% endif %}"
+                    href="{{ '/archive/' | relative_url }}">
+                    <span aria-hidden="true">🗄️</span> Archive
+                </a>
+                <a class="nav-link {% if page.url contains '/weekly' %}active{% endif %}"
+                    href="{{ '/weekly/' | relative_url }}">
+                    <span aria-hidden="true">📆</span> Weekly
+                </a>
+            </nav>
+
+            <!-- Dark / Light toggle -->
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" data-tooltip="Toggle theme">
+                <span id="theme-icon" aria-hidden="true">🌙</span>
+            </button>
+
+            <!-- Mobile hamburger -->
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle navigation menu"
+                aria-expanded="false" aria-controls="mobile-nav">
+                <span id="menu-icon" aria-hidden="true">☰</span>
+            </button>
+
+        </div><!-- /.header-inner -->
+    </header>
+
+    <!-- Mobile navigation drawer -->
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation" aria-hidden="true">
+        <a class="nav-link {% if page.url == '/' %}active{% endif %}" href="{{ '/' | relative_url }}">🏠 Home</a>
+        <a class="nav-link {% if page.url contains '/papers' %}active{% endif %}"
+            href="{{ '/papers/' | relative_url }}">📄 Papers</a>
+        <a class="nav-link {% if page.url contains '/news' %}active{% endif %}" href="{{ '/news/' | relative_url }}">📰
+            News</a>
+        <a class="nav-link {% if page.url contains '/trending' %}active{% endif %}"
+            href="{{ '/trending/' | relative_url }}"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"
+                width="14" height="14" style="vertical-align:-2px">
+                <path
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+            </svg> Repos</a>
+        <a class="nav-link {% if page.url contains '/archive' %}active{% endif %}"
+            href="{{ '/archive/' | relative_url }}">🗄️ Archive</a>
+        <a class="nav-link {% if page.url contains '/weekly' %}active{% endif %}"
+            href="{{ '/weekly/' | relative_url }}">📆 Weekly</a>
+    </nav>
+
+    <!-- ============================================================
+     PAGE SHELL  (main + sidebar)
+     ============================================================ -->
+    <div class="page-shell">
+
+        <!-- ── MAIN CONTENT ── -->
+        <main class="page-main content-body" id="main-content" tabindex="-1">
+
+            {%- if page.date -%}
+            <!-- Page hero for dated digest posts -->
+            <div class="page-hero fade-in">
+                <div class="digest-date">
+                    <span aria-hidden="true">✨</span>
+                    {{ page.date | date: "%A, %B %-d, %Y" }}
+                </div>
+                <h1>{{ page.title | default: "Daily AI Digest" }}</h1>
+                {%- if page.summary -%}
+                <div class="digest-summary">{{ page.summary | markdownify }}</div>
+                {%- endif -%}
+            </div>
+
+            <!-- Sort controls -->
+            <div class="sort-controls fade-in fade-in-delay-1" role="group" aria-label="Sort order">
+                <span class="sort-label">Sort:</span>
+                <button class="sort-btn active" data-sort="recent" onclick="setSort(this,'recent')">
+                    🕐 Recent
+                </button>
+                <button class="sort-btn" data-sort="relevance" onclick="setSort(this,'relevance')">
+                    ⭐ Relevance
+                </button>
+            </div>
+            {%- endif -%}
+
+            <div class="fade-in fade-in-delay-2">
+                {{ content }}
+            </div>
+
+        </main><!-- /#main-content -->
+
+        <!-- ── SIDEBAR ── -->
+        <aside class="page-sidebar" aria-label="Sidebar">
+
+            <!-- Date widget -->
+            <div class="widget fade-in fade-in-delay-1">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">📅</span>
+                    <h3>Today</h3>
+                </div>
+                <div class="widget-body">
+                    <div class="date-widget-display" aria-label="Current date">
+                        <div class="date-day" id="sidebar-day"></div>
+                        <div class="date-month-year" id="sidebar-month-year"></div>
+                        <div class="date-weekday" id="sidebar-weekday"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ArXiv Subject categories (data-driven from site/_data/arxiv_config.yml) -->
+            <div class="widget fade-in fade-in-delay-2">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">📡</span>
+                    <h3>ArXiv Subjects</h3>
+                </div>
+                <div class="widget-body">
+                    <ul class="category-list" role="list">
+                        {%- if site.data.arxiv_config.categories -%}
+                        {%- for cat in site.data.arxiv_config.categories -%}
+                        <li class="category-item subject-item">
+                            <span class="cat-code">{{ cat.code }}</span>
+                            <span class="cat-name">{{ cat.name }}</span>
+                        </li>
+                        {%- endfor -%}
+                        {%- else -%}
+                        <li class="category-item subject-item">
+                            <span class="cat-name">cs.AI · cs.LG · cs.CV · cs.CL · cs.RO</span>
+                        </li>
+                        {%- endif -%}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Personal interest topics (data-driven from site/_data/arxiv_config.yml) -->
+            <div class="widget fade-in fade-in-delay-2">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">🎯</span>
+                    <h3>Personal Interests</h3>
+                </div>
+                <div class="widget-body">
+                    <ul class="category-list topic-list" role="list">
+                        {%- if site.data.arxiv_config.topic_interests -%}
+                        {%- for topic in site.data.arxiv_config.topic_interests -%}
+                        <li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            {{ topic }}
+                        </li>
+                        {%- endfor -%}
+                        {%- else -%}
+                        <li class="category-item topic-item">No topics configured.</li>
+                        {%- endif -%}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Saved papers placeholder -->
+            <div class="widget fade-in fade-in-delay-2">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">🔖</span>
+                    <h3>Saved Papers</h3>
+                </div>
+                <div class="widget-body">
+                    <p class="widget-placeholder">Bookmark feature coming soon.</p>
+                </div>
+            </div>
+
+            <!-- Trending articles -->
+            <div class="widget fade-in fade-in-delay-3">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">🔥</span>
+                    <h3>Trending This Week</h3>
+                </div>
+                <div class="widget-body">
+                    <ol class="trending-list" role="list">
+                        {%- assign recent_posts = site.posts | limit: 5 -%}
+                        {%- for post in recent_posts -%}
+                        <li class="trending-item">
+                            <span class="trending-rank" aria-label="Rank {{ forloop.index }}">
+                                {{ forloop.index }}
+                            </span>
+                            <div class="trending-info">
+                                <a class="trending-title" href="{{ post.url | relative_url }}">
+                                    {{ post.title | truncate: 60 }}
+                                </a>
+                                <div class="trending-meta">
+                                    <span>{{ post.date | date: "%b %-d" }}</span>
+                                    <span class="trending-tag">digest</span>
+                                </div>
+                            </div>
+                        </li>
+                        {%- endfor -%}
+                    </ol>
+                </div>
+            </div>
+
+            <!-- RSS / Subscribe -->
+            <div class="widget fade-in fade-in-delay-3">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">📡</span>
+                    <h3>Subscribe</h3>
+                </div>
+                <div class="widget-body" style="display:flex;flex-direction:column;gap:.5rem;">
+                    <a class="social-link" href="{{ '/feed.xml' | relative_url }}" style="justify-content:center;">
+                        <span aria-hidden="true">🔔</span> RSS Feed
+                    </a>
+                    <a class="social-link" href="{{ site.github.repo_url | default: '#' }}"
+                        style="justify-content:center;">
+                        <span aria-hidden="true">⭐</span> Star on GitHub
+                    </a>
+                </div>
+            </div>
+
+        </aside><!-- /.page-sidebar -->
+
+    </div><!-- /.page-shell -->
+
+    <!-- ============================================================
+     FOOTER
+     ============================================================ -->
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-inner">
+
+            <div class="footer-grid">
+
+                <!-- Brand column -->
+                <div class="footer-brand">
+                    <a class="site-brand" href="{{ '/' | relative_url }}" aria-label="{{ site.title }} home">
+                        <div class="brand-icon" aria-hidden="true">🤖</div>
+                        <div>
+                            <div class="brand-title">AI Digest</div>
+                            <div class="brand-subtitle">Daily Research &amp; Tech</div>
+                        </div>
+                    </a>
+                    <p class="brand-tagline">
+                        A curated daily digest of AI research papers and tech news,
+                        automatically filtered and scored for relevance.
+                    </p>
+                </div>
+
+                <!-- Quick links -->
+                <div class="footer-col">
+                    <h4>Explore</h4>
+                    <ul class="footer-links">
+                        <li><a href="{{ '/' | relative_url }}"><span aria-hidden="true">🏠</span> Home</a></li>
+                        <li><a href="{{ '/papers/' | relative_url }}"><span aria-hidden="true">📄</span> Research
+                                Papers</a></li>
+                        <li><a href="{{ '/news/' | relative_url }}"><span aria-hidden="true">📰</span> Tech News</a>
+                        </li>
+                        <li><a href="{{ '/trending/' | relative_url }}"><svg aria-hidden="true" viewBox="0 0 16 16"
+                                    fill="currentColor" width="14" height="14" style="vertical-align:-2px">
+                                    <path
+                                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                </svg> GitHub Repos</a>
+                        </li>
+                        <li><a href="{{ '/archive/' | relative_url }}"><span aria-hidden="true">🗄️</span> Archive</a>
+                        </li>
+                        <li><a href="{{ '/weekly/' | relative_url }}"><span aria-hidden="true">📆</span> Weekly
+                                Roundup</a></li>
+                        <li><a href="{{ '/feed.xml' | relative_url }}"><span aria-hidden="true">📡</span> RSS Feed</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Social & Connect -->
+                <div class="footer-col">
+                    <h4>Connect</h4>
+                    <div class="social-links">
+                        <a class="social-link" href="https://github.com/hiimmuc" target="_blank"
+                            rel="noopener noreferrer" aria-label="GitHub profile">
+                            <span aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                    <path
+                                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                                </svg>
+                            </span>
+                            GitHub
+                        </a>
+                        <a class="social-link" href="https://arxiv.org" target="_blank" rel="noopener noreferrer"
+                            aria-label="arXiv papers">
+                            <span aria-hidden="true">📚</span>
+                            arXiv
+                        </a>
+                        <a class="social-link" href="https://huggingface.co" target="_blank" rel="noopener noreferrer"
+                            aria-label="HuggingFace">
+                            <span aria-hidden="true">🤗</span>
+                            HuggingFace
+                        </a>
+                    </div>
+                </div>
+
+            </div><!-- /.footer-grid -->
+
+            <!-- Bottom bar -->
+            <div class="footer-bottom">
+                <p class="footer-copyright">
+                    <span aria-hidden="true">©</span>
+                    {{ site.time | date: "%Y" }}
+                    <strong>AI Digest</strong> by hiimmuc.
+                    Built with Jekyll &amp; ❤️
+                </p>
+                <nav class="footer-legal" aria-label="Legal">
+                    <a href="{{ '/privacy/' | relative_url }}">Privacy Policy</a>
+                    <a href="{{ '/terms/'   | relative_url }}">Terms of Use</a>
+                    <a href="{{ site.github.repo_url | default: 'https://github.com/hiimmuc' }}" target="_blank"
+                        rel="noopener">Open Source</a>
+                </nav>
+            </div>
+
+        </div><!-- /.footer-inner -->
+    </footer>
+
+    <!-- Back-to-top button -->
+    <button class="back-to-top" id="back-to-top" aria-label="Scroll back to top">↑</button>
+
+    <!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+    <script src="{{ '/assets/js/modern.js' | relative_url }}" defer></script>
+
+</body>
+
+</html>

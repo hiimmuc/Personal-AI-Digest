@@ -1,0 +1,18 @@
+I"<p>The dominant theme centers on advancing <strong>Large Language Models (LLMs)</strong> through improved calibration, reasoning, and robustness, alongside explorations of multi-agent systems, memory auditing, and open-endedness.</p>
+
+<p><strong>Research highlights:</strong></p>
+<ul>
+  <li><strong>LLM Calibration</strong>: Papers address uncertainty estimation, confidence calibration, and epistemic awareness to improve reliability in decision-making.</li>
+  <li><strong>Multi-Agent Systems</strong>: Research focuses on collaborative reasoning, shared policies, and decentralized execution to enhance coordination and scalability.</li>
+  <li><strong>Memory and Audit</strong>: Techniques like causal attribution and structural anomaly detection aim to audit and secure agent memory against poisoning.</li>
+  <li><strong>Reasoning Mechanisms</strong>: Studies investigate dynamical systems, entropy transitions, and step-level rubrics to decode how and when LLMs reason.</li>
+  <li><strong>Open-Endedness</strong>: Efforts to replicate open-ended creativity in models through compositional programs and vision-language interactions.</li>
+</ul>
+
+<p><strong>Tech buzz:</strong><br />
+A security incident highlights risks in AI tools, with a <strong>Copilot</strong> feature exfiltrating files.</p>
+<ul>
+  <li><strong>LLM training infrastructure</strong> sees growth, with Norway investing in 2 petabytes of Huawei storage.</li>
+  <li><strong>Ethical concerns</strong> arise as facial data sharing in age-check systems sparks scrutiny.</li>
+</ul>
+:ET

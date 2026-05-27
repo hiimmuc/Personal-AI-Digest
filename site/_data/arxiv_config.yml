@@ -1,0 +1,20 @@
+categories:
+- code: cs.AI
+  name: Artificial Intelligence
+- code: cs.LG
+  name: Machine Learning
+- code: cs.RO
+  name: Robotics
+- code: cs.CV
+  name: Computer Vision and Pattern Recognition
+- code: cs.CL
+  name: Computation and Language
+- code: cs.HC
+  name: Human-Computer Interaction
+topic_interests:
+- Multi-Agent Systems
+- Embodied AI
+- Vision-Language Models
+- 3D Scene Graph
+- Vision-Language Navigation
+- Human-Computer Interaction

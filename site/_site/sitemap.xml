@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>http://localhost:4002/ai-digest-daily/digest/2026-05-26/</loc>
+<lastmod>2026-05-26T00:00:00+07:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/digest/2026-05-27/</loc>
+<lastmod>2026-05-27T00:00:00+07:00</lastmod>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/archive/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/news/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/papers/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/privacy/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/terms/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/trending/</loc>
+</url>
+<url>
+<loc>http://localhost:4002/ai-digest-daily/weekly/</loc>
+</url>
+</urlset>

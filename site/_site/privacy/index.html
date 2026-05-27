@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Personal daily AI & tech research digest">
+    <meta name="author" content="hiimmuc">
+    <meta property="og:title" content="Privacy Policy">
+    <meta property="og:description"
+        content="Personal daily AI & tech research digest">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="http://localhost:4002/ai-digest-daily/privacy/">
+    <title>Privacy Policy · AI Digest</title>
+    <link rel="icon" href="/ai-digest-daily/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/ai-digest-daily/assets/css/modern.css">
+    <link rel="alternate" type="application/rss+xml" title="AI Digest" href="/ai-digest-daily/feed.xml">
+</head>
+
+<body>
+
+    <!-- Reading progress bar -->
+    <div id="progress" aria-hidden="true"></div>
+
+    <!-- Skip navigation -->
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <!-- ============================================================
+     HEADER
+     ============================================================ -->
+    <header class="site-header" role="banner">
+        <div class="header-inner">
+
+            <!-- Brand / Logo -->
+            <a class="site-brand" href="/ai-digest-daily/" aria-label="AI Digest home">
+                <div class="brand-icon" aria-hidden="true">🤖</div>
+                <div>
+                    <div class="brand-title">AI Digest</div>
+                    <div class="brand-subtitle">Daily Research &amp; Tech</div>
+                </div>
+            </a>
+
+            <!-- Live date badge -->
+            <div class="header-date" aria-label="Today's date">
+                <span class="date-icon" aria-hidden="true">📅</span>
+                <span id="header-date-text">May 27, 2026
+                </span>
+            </div>
+
+            <div class="header-spacer" aria-hidden="true"></div>
+
+            <!-- Primary nav -->
+            <nav class="site-nav" aria-label="Primary navigation">
+                <a class="nav-link " href="/ai-digest-daily/">
+                    <span aria-hidden="true">🏠</span> Home
+                </a>
+                <a class="nav-link "
+                    href="/ai-digest-daily/papers/">
+                    <span aria-hidden="true">📄</span> Papers
+                </a>
+                <a class="nav-link "
+                    href="/ai-digest-daily/news/">
+                    <span aria-hidden="true">📰</span> News
+                </a>
+                <a class="nav-link "
+                    href="/ai-digest-daily/trending/">
+                    <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" width="16" height="16"
+                        style="vertical-align:-3px">
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                    </svg> Repos
+                </a>
+                <a class="nav-link "
+                    href="/ai-digest-daily/archive/">
+                    <span aria-hidden="true">🗄️</span> Archive
+                </a>
+                <a class="nav-link "
+                    href="/ai-digest-daily/weekly/">
+                    <span aria-hidden="true">📆</span> Weekly
+                </a>
+            </nav>
+
+            <!-- Dark / Light toggle -->
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" data-tooltip="Toggle theme">
+                <span id="theme-icon" aria-hidden="true">🌙</span>
+            </button>
+
+            <!-- Mobile hamburger -->
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle navigation menu"
+                aria-expanded="false" aria-controls="mobile-nav">
+                <span id="menu-icon" aria-hidden="true">☰</span>
+            </button>
+
+        </div><!-- /.header-inner -->
+    </header>
+
+    <!-- Mobile navigation drawer -->
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation" aria-hidden="true">
+        <a class="nav-link " href="/ai-digest-daily/">🏠 Home</a>
+        <a class="nav-link "
+            href="/ai-digest-daily/papers/">📄 Papers</a>
+        <a class="nav-link " href="/ai-digest-daily/news/">📰
+            News</a>
+        <a class="nav-link "
+            href="/ai-digest-daily/trending/"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"
+                width="14" height="14" style="vertical-align:-2px">
+                <path
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+            </svg> Repos</a>
+        <a class="nav-link "
+            href="/ai-digest-daily/archive/">🗄️ Archive</a>
+        <a class="nav-link "
+            href="/ai-digest-daily/weekly/">📆 Weekly</a>
+    </nav>
+
+    <!-- ============================================================
+     PAGE SHELL  (main + sidebar)
+     ============================================================ -->
+    <div class="page-shell">
+
+        <!-- ── MAIN CONTENT ── -->
+        <main class="page-main content-body" id="main-content" tabindex="-1"><div class="fade-in fade-in-delay-2">
+                <h1 id="privacy-policy">Privacy Policy</h1>
+
+<p><em>Last updated: May 27, 2026</em></p>
+
+<p>AI Digest is a personal research digest. We do not collect, store, or share any personal data.</p>
+
+<ul>
+  <li><strong>No tracking</strong>: This site does not use analytics or advertising cookies.</li>
+  <li><strong>No accounts</strong>: No registration or login is required.</li>
+  <li><strong>Hosted content</strong>: All content is statically generated and served via GitHub Pages.</li>
+  <li><strong>External links</strong>: When clicking links to arXiv, GitHub, or other sites, those sites’ privacy policies apply.</li>
+</ul>
+
+<p>Questions? Open an issue on <a href="https://github.com/hiimmuc/ai-digest-daily">GitHub</a>.</p>
+
+            </div>
+
+        </main><!-- /#main-content -->
+
+        <!-- ── SIDEBAR ── -->
+        <aside class="page-sidebar" aria-label="Sidebar">
+
+            <!-- Date widget -->
+            <div class="widget fade-in fade-in-delay-1">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">📅</span>
+                    <h3>Today</h3>
+                </div>
+                <div class="widget-body">
+                    <div class="date-widget-display" aria-label="Current date">
+                        <div class="date-day" id="sidebar-day"></div>
+                        <div class="date-month-year" id="sidebar-month-year"></div>
+                        <div class="date-weekday" id="sidebar-weekday"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ArXiv Subject categories (data-driven from site/_data/arxiv_config.yml) -->
+            <div class="widget fade-in fade-in-delay-2">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">📡</span>
+                    <h3>ArXiv Subjects</h3>
+                </div>
+                <div class="widget-body">
+                    <ul class="category-list" role="list"><li class="category-item subject-item">
+                            <span class="cat-code">cs.AI</span>
+                            <span class="cat-name">Artificial Intelligence</span>
+                        </li><li class="category-item subject-item">
+                            <span class="cat-code">cs.LG</span>
+                            <span class="cat-name">Machine Learning</span>
+                        </li><li class="category-item subject-item">
+                            <span class="cat-code">cs.RO</span>
+                            <span class="cat-name">Robotics</span>
+                        </li><li class="category-item subject-item">
+                            <span class="cat-code">cs.CV</span>
+                            <span class="cat-name">Computer Vision and Pattern Recognition</span>
+                        </li><li class="category-item subject-item">
+                            <span class="cat-code">cs.CL</span>
+                            <span class="cat-name">Computation and Language</span>
+                        </li><li class="category-item subject-item">
+                            <span class="cat-code">cs.HC</span>
+                            <span class="cat-name">Human-Computer Interaction</span>
+                        </li></ul>
+                </div>
+            </div>
+
+            <!-- Personal interest topics (data-driven from site/_data/arxiv_config.yml) -->
+            <div class="widget fade-in fade-in-delay-2">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">🎯</span>
+                    <h3>Personal Interests</h3>
+                </div>
+                <div class="widget-body">
+                    <ul class="category-list topic-list" role="list"><li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            Multi-Agent Systems
+                        </li><li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            Embodied AI
+                        </li><li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            Vision-Language Models
+                        </li><li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            3D Scene Graph
+                        </li><li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            Vision-Language Navigation
+                        </li><li class="category-item topic-item">
+                            <span class="topic-bullet" aria-hidden="true">›</span>
+                            Human-Computer Interaction
+                        </li></ul>
+                </div>
+            </div>
+
+            <!-- Saved papers placeholder -->
+            <div class="widget fade-in fade-in-delay-2">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">🔖</span>
+                    <h3>Saved Papers</h3>
+                </div>
+                <div class="widget-body">
+                    <p class="widget-placeholder">Bookmark feature coming soon.</p>
+                </div>
+            </div>
+
+            <!-- Trending articles -->
+            <div class="widget fade-in fade-in-delay-3">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">🔥</span>
+                    <h3>Trending This Week</h3>
+                </div>
+                <div class="widget-body">
+                    <ol class="trending-list" role="list"><li class="trending-item">
+                            <span class="trending-rank" aria-label="Rank 1">
+                                1
+                            </span>
+                            <div class="trending-info">
+                                <a class="trending-title" href="/ai-digest-daily/digest/2026-05-27/">
+                                    Daily Digest 2026-05-27
+                                </a>
+                                <div class="trending-meta">
+                                    <span>May 27</span>
+                                    <span class="trending-tag">digest</span>
+                                </div>
+                            </div>
+                        </li><li class="trending-item">
+                            <span class="trending-rank" aria-label="Rank 2">
+                                2
+                            </span>
+                            <div class="trending-info">
+                                <a class="trending-title" href="/ai-digest-daily/digest/2026-05-26/">
+                                    Daily Digest 2026-05-26
+                                </a>
+                                <div class="trending-meta">
+                                    <span>May 26</span>
+                                    <span class="trending-tag">digest</span>
+                                </div>
+                            </div>
+                        </li></ol>
+                </div>
+            </div>
+
+            <!-- RSS / Subscribe -->
+            <div class="widget fade-in fade-in-delay-3">
+                <div class="widget-header">
+                    <span class="widget-icon" aria-hidden="true">📡</span>
+                    <h3>Subscribe</h3>
+                </div>
+                <div class="widget-body" style="display:flex;flex-direction:column;gap:.5rem;">
+                    <a class="social-link" href="/ai-digest-daily/feed.xml" style="justify-content:center;">
+                        <span aria-hidden="true">🔔</span> RSS Feed
+                    </a>
+                    <a class="social-link" href="https://github.com/hiimmuc/ai-digest-daily"
+                        style="justify-content:center;">
+                        <span aria-hidden="true">⭐</span> Star on GitHub
+                    </a>
+                </div>
+            </div>
+
+        </aside><!-- /.page-sidebar -->
+
+    </div><!-- /.page-shell -->
+
+    <!-- ============================================================
+     FOOTER
+     ============================================================ -->
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-inner">
+
+            <div class="footer-grid">
+
+                <!-- Brand column -->
+                <div class="footer-brand">
+                    <a class="site-brand" href="/ai-digest-daily/" aria-label="AI Digest home">
+                        <div class="brand-icon" aria-hidden="true">🤖</div>
+                        <div>
+                            <div class="brand-title">AI Digest</div>
+                            <div class="brand-subtitle">Daily Research &amp; Tech</div>
+                        </div>
+                    </a>
+                    <p class="brand-tagline">
+                        A curated daily digest of AI research papers and tech news,
+                        automatically filtered and scored for relevance.
+                    </p>
+                </div>
+
+                <!-- Quick links -->
+                <div class="footer-col">
+                    <h4>Explore</h4>
+                    <ul class="footer-links">
+                        <li><a href="/ai-digest-daily/"><span aria-hidden="true">🏠</span> Home</a></li>
+                        <li><a href="/ai-digest-daily/papers/"><span aria-hidden="true">📄</span> Research
+                                Papers</a></li>
+                        <li><a href="/ai-digest-daily/news/"><span aria-hidden="true">📰</span> Tech News</a>
+                        </li>
+                        <li><a href="/ai-digest-daily/trending/"><svg aria-hidden="true" viewBox="0 0 16 16"
+                                    fill="currentColor" width="14" height="14" style="vertical-align:-2px">
+                                    <path
+                                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                </svg> GitHub Repos</a>
+                        </li>
+                        <li><a href="/ai-digest-daily/archive/"><span aria-hidden="true">🗄️</span> Archive</a>
+                        </li>
+                        <li><a href="/ai-digest-daily/weekly/"><span aria-hidden="true">📆</span> Weekly
+                                Roundup</a></li>
+                        <li><a href="/ai-digest-daily/feed.xml"><span aria-hidden="true">📡</span> RSS Feed</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Social & Connect -->
+                <div class="footer-col">
+                    <h4>Connect</h4>
+                    <div class="social-links">
+                        <a class="social-link" href="https://github.com/hiimmuc" target="_blank"
+                            rel="noopener noreferrer" aria-label="GitHub profile">
+                            <span aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                    <path
+                                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                                </svg>
+                            </span>
+                            GitHub
+                        </a>
+                        <a class="social-link" href="https://arxiv.org" target="_blank" rel="noopener noreferrer"
+                            aria-label="arXiv papers">
+                            <span aria-hidden="true">📚</span>
+                            arXiv
+                        </a>
+                        <a class="social-link" href="https://huggingface.co" target="_blank" rel="noopener noreferrer"
+                            aria-label="HuggingFace">
+                            <span aria-hidden="true">🤗</span>
+                            HuggingFace
+                        </a>
+                    </div>
+                </div>
+
+            </div><!-- /.footer-grid -->
+
+            <!-- Bottom bar -->
+            <div class="footer-bottom">
+                <p class="footer-copyright">
+                    <span aria-hidden="true">©</span>
+                    2026
+                    <strong>AI Digest</strong> by hiimmuc.
+                    Built with Jekyll &amp; ❤️
+                </p>
+                <nav class="footer-legal" aria-label="Legal">
+                    <a href="/ai-digest-daily/privacy/">Privacy Policy</a>
+                    <a href="/ai-digest-daily/terms/">Terms of Use</a>
+                    <a href="https://github.com/hiimmuc/ai-digest-daily" target="_blank"
+                        rel="noopener">Open Source</a>
+                </nav>
+            </div>
+
+        </div><!-- /.footer-inner -->
+    </footer>
+
+    <!-- Back-to-top button -->
+    <button class="back-to-top" id="back-to-top" aria-label="Scroll back to top">↑</button>
+
+    <!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+    <script src="/ai-digest-daily/assets/js/modern.js" defer></script>
+
+</body>
+
+</html>
