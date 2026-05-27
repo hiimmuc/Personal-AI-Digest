@@ -1,4 +1,4 @@
-"""Daily pipeline entrypoint: ArXiv + News -> SQLite -> Markdown -> Telegram."""
+"""Daily pipeline entrypoint: ArXiv + News -> SQLite -> Markdown."""
 
 import logging
 from datetime import date, datetime, timedelta, timezone
@@ -8,7 +8,6 @@ import yaml
 from dotenv import load_dotenv
 
 from .db import database
-from .delivery import telegram
 from .llm import client as llm_client
 from .llm.prompts import DIGEST_SUMMARY_PROMPT
 from .pipelines import arxiv_pipeline, github_trending_pipeline, news_pipeline
@@ -127,13 +126,6 @@ def main() -> None:
     post_path = _SITE_DIR / f"{today}-daily.md"
     post_path.write_text(content, encoding="utf-8")
     print(f"\nWrote digest → {post_path}")
-
-    if config.get("delivery", {}).get("telegram_enabled", False):
-        try:
-            telegram.push_daily(papers, news_items, today)
-            print("Telegram push sent")
-        except Exception as e:
-            print(f"Telegram push failed: {e}")
 
 
 if __name__ == "__main__":

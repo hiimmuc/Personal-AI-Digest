@@ -167,7 +167,7 @@ venv.bak/
 .ropeproject
 
 # mkdocs documentation
-/site
+# /site
 
 # mypy
 .mypy_cache/
@@ -236,7 +236,7 @@ build/
 
 # Jekyll build output
 # site/_site/
-site/.jekyll-cache/
+# site/.jekyll-cache/
 # site/Gemfile.lock
 
 # References (already cloned separately)

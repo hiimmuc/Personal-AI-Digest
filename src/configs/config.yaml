@@ -82,7 +82,7 @@ news:
         #   enabled: true
 
 delivery:
-    telegram_enabled: true
+    telegram_enabled: false
     github_pages_repo: hiimmuc/ai-digest-daily
     daily_time_utc: "10:00+07:00"
     weekly_day: Sunday

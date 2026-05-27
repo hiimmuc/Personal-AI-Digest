@@ -1,4 +1,4 @@
-"""Weekly rollup entrypoint: query DB → LLM narrative → Markdown → Telegram."""
+"""Weekly rollup entrypoint: query DB → LLM narrative → Markdown."""
 
 from datetime import date, timedelta
 from pathlib import Path
@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .db import database
-from .delivery import telegram
 from .llm import client as llm_client
 from .llm.prompts import WEEKLY_NARRATIVE_PROMPT
 from .render import weekly as weekly_renderer
@@ -57,13 +56,6 @@ def main() -> None:
     out_path = _SITE_DIR / f"week-{week:02d}.md"
     out_path.write_text(content, encoding="utf-8")
     print(f"Wrote weekly rollup → {out_path}")
-
-    if config.get("delivery", {}).get("telegram_enabled", False):
-        try:
-            telegram.push_weekly(papers, news_items, week, narrative)
-            print("Telegram push sent")
-        except Exception as e:
-            print(f"Telegram push failed: {e}")
 
 
 if __name__ == "__main__":
