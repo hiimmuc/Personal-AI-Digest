@@ -1,15 +1,22 @@
-"""News pipeline: fetch RSS feeds → dedup → LLM summarize+score → DB."""
+"""News pipeline: fetch RSS feeds -> dedup -> LLM summarize+score -> DB."""
 
-import json
+import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Dict, List
 
 import feedparser
+from tqdm import tqdm
 
 from ..db import database
 from ..llm import client as llm_client
 from ..llm.prompts import NEWS_PROMPT
+from ..llm.scoring import parse_json_response
+
+logger = logging.getLogger(__name__)
+
+MAX_WORKERS = 4
 
 
 def fetch_rss_feed(source: Dict, since: datetime) -> List[Dict]:
@@ -23,33 +30,26 @@ def fetch_rss_feed(source: Dict, since: datetime) -> List[Dict]:
                 pub_dt = datetime(*pub[:6], tzinfo=timezone.utc)
                 if pub_dt < since:
                     continue
-
             url = entry.get("link", "")
             if not url:
                 continue
-
-            # Extract text content, strip HTML
-            raw_content = entry.get("summary", "")
-            if not raw_content and entry.get("content"):
-                raw_content = entry["content"][0].get("value", "")
-            content = re.sub("<[^<]+?>", "", raw_content).strip()
-
-            items.append(
-                {
-                    "url": url,
-                    "title": entry.get("title", ""),
-                    "source": source["name"],
-                    "content": content[:2000],
-                    "published_date": entry.get("published", "")[:10],
-                }
-            )
+            raw = entry.get("summary", "")
+            if not raw and entry.get("content"):
+                raw = entry["content"][0].get("value", "")
+            items.append({
+                "url": url,
+                "title": entry.get("title", ""),
+                "source": source["name"],
+                "content": re.sub("<[^<]+?>", "", raw).strip()[:2000],
+                "published_date": entry.get("published", "")[:10],
+            })
     except Exception as e:
-        print(f"  RSS fetch failed for '{source['name']}': {e}")
+        logger.warning("RSS fetch failed for '%s': %s", source["name"], e)
     return items
 
 
-def summarize_and_score(item: Dict, topic_categories: List[str]) -> Dict:
-    """Call LLM to summarize and score one news item."""
+def _analyze_item(item: Dict, topic_categories: List[str]) -> Dict:
+    """Call LLM to summarize and score one news item. Returns analysis dict or {}."""
     prompt = NEWS_PROMPT.format(
         source=item["source"],
         title=item["title"],
@@ -58,12 +58,9 @@ def summarize_and_score(item: Dict, topic_categories: List[str]) -> Dict:
         url=item["url"],
     )
     try:
-        raw = llm_client.complete(prompt)
-        raw = re.sub(r"```json\n?", "", raw)
-        raw = re.sub(r"```", "", raw).strip()
-        return json.loads(raw)
+        return parse_json_response(llm_client.complete(prompt))
     except Exception as e:
-        print(f"  LLM failed for '{item['title'][:50]}': {e}")
+        logger.warning("LLM failed for '%s': %s", item["title"][:60], e)
         return {}
 
 
@@ -74,43 +71,47 @@ def run(config: dict, since: datetime) -> List[Dict]:
     topic_categories: List[str] = config["topic_categories"]
     sources = [s for s in news_cfg.get("sources", []) if s.get("enabled", True)]
 
-    # 1. Fetch from all enabled sources
+    # 1. Fetch all enabled sources
     all_items: List[Dict] = []
     for source in sources:
         items = fetch_rss_feed(source, since)
-        print(f"  {source['name']}: {len(items)} items")
+        logger.info("%s: %d items", source["name"], len(items))
         all_items.extend(items)
-    print(f"Fetched {len(all_items)} news items total")
+    logger.info("Fetched %d news items total", len(all_items))
 
-    # 2. Deduplicate by URL against SQLite
+    # 2. Deduplicate by URL against DB
     new_items = [i for i in all_items if not database.news_exists(i["url"])]
-    print(f"{len(new_items)} new items (not in DB)")
+    logger.info("%d new items (not in DB)", len(new_items))
     if not new_items:
         return []
 
-    # 3. LLM: summarize + score each item, filter below cutoff
+    # 3. LLM: analyze all items concurrently, filter below cutoff
+    llm_client.try_init()
     results: List[Dict] = []
-    for item in new_items:
-        print(f"  Analyzing: {item['title'][:60]}...")
-        analysis = summarize_and_score(item, topic_categories)
-        if not analysis:
-            continue
-        relevance = int(analysis.get("relevance", 1))
-        if relevance < relevance_cutoff:
-            continue
-        item.update(
-            {
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(_analyze_item, item, topic_categories): item for item in new_items}
+        for future in tqdm(as_completed(futures), total=len(new_items), desc="Analyzing news"):
+            item = futures[future]
+            try:
+                analysis = future.result()
+            except Exception as e:
+                logger.warning("Analysis failed: %s", e)
+                continue
+            if not analysis:
+                continue
+            relevance = int(analysis.get("relevance", 1))
+            if relevance < relevance_cutoff:
+                continue
+            item.update({
                 "summary": analysis.get("summary", ""),
                 "tags": analysis.get("tags", ""),
                 "topic_category": analysis.get("topic_category", ""),
                 "relevance": relevance,
-            }
-        )
-        results.append(item)
+            })
+            results.append(item)
 
-    # 4. Write to SQLite
+    # 4. Write to DB
     for item in results:
         database.upsert_news_item(item)
-    print(f"Saved {len(results)} news items to database")
-
+    logger.info("Saved %d news items to database", len(results))
     return results

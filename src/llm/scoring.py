@@ -1,7 +1,9 @@
 """Relevance scoring via LLM batch calls."""
 
 import json
+import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 
 from tqdm import tqdm
@@ -9,7 +11,17 @@ from tqdm import tqdm
 from . import client
 from .prompts import SCORING_PROMPT
 
+logger = logging.getLogger(__name__)
+
 BATCH_SIZE = 10
+MAX_WORKERS = 4  # concurrent API calls
+
+
+def parse_json_response(text: str) -> dict:
+    """Parse a single JSON object from an LLM response, stripping markdown fences."""
+    text = re.sub(r"```json\n?", "", text)
+    text = re.sub(r"```", "", text).strip()
+    return json.loads(text)
 
 
 def parse_jsonl(text: str) -> List[Dict]:
@@ -33,13 +45,12 @@ def score_papers_batch(
     papers: List[Dict], topic_categories: List[str], interests: str
 ) -> Dict[str, Dict]:
     """Score papers for relevance in batches. Returns dict keyed by arxiv_id."""
-    scores: Dict[str, Dict] = {}
-    for i in tqdm(range(0, len(papers), BATCH_SIZE), desc="Scoring batches"):
-        batch = papers[i : i + BATCH_SIZE]
+
+    def _score_one_batch(batch: List[Dict]) -> List[Dict]:
         papers_text = "\n\n".join(
             f"ArXiv ID: {p['arxiv_id']}\n"
             f"Title: {p['title']}\n"
-            f"Abstract: {p['abstract'][:1000]}"
+            f"Abstract: {p['abstract'][:500]}"
             for p in batch
         )
         prompt = SCORING_PROMPT.format(
@@ -47,11 +58,19 @@ def score_papers_batch(
             interests=interests,
             papers=papers_text,
         )
-        try:
-            response = client.complete(prompt)
-            for item in parse_jsonl(response):
-                if "arxiv_id" in item:
-                    scores[item["arxiv_id"]] = item
-        except Exception as e:
-            print(f"Scoring batch {i // BATCH_SIZE + 1} failed: {e}")
+        return parse_jsonl(client.complete(prompt))
+
+    batches = [papers[i : i + BATCH_SIZE] for i in range(0, len(papers), BATCH_SIZE)]
+    scores: Dict[str, Dict] = {}
+
+    client.try_init()  # fire "Initialising ..." log before the progress bar
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(_score_one_batch, batch): idx for idx, batch in enumerate(batches)}
+        for future in tqdm(as_completed(futures), total=len(batches), desc="Scoring batches"):
+            try:
+                for item in future.result():
+                    if "arxiv_id" in item:
+                        scores[item["arxiv_id"]] = item
+            except Exception as e:
+                logger.warning("Scoring batch %d failed: %s", futures[future] + 1, e)
     return scores

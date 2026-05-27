@@ -1,12 +1,11 @@
-"""Daily pipeline entrypoint: ArXiv + News → SQLite → Markdown → Telegram."""
+"""Daily pipeline entrypoint: ArXiv + News -> SQLite -> Markdown -> Telegram."""
 
+import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
-
-load_dotenv()
 
 from .db import database
 from .delivery import telegram
@@ -14,6 +13,14 @@ from .llm import client as llm_client
 from .llm.prompts import DIGEST_SUMMARY_PROMPT
 from .pipelines import arxiv_pipeline, github_trending_pipeline, news_pipeline
 from .render import daily as daily_renderer
+
+load_dotenv()  # populate env vars from .env before any config is read
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 _SITE_DIR = Path(__file__).parent.parent / "site" / "_posts"
 _SITE_DATA = Path(__file__).parent.parent / "site" / "_data"
@@ -48,7 +55,7 @@ def _write_jekyll_data(config: dict) -> None:
             default_flow_style=False,
             allow_unicode=True,
         )
-    print(f"Wrote Jekyll data → {data_path}")
+    logger.info("Wrote Jekyll data -> %s", data_path)
 
 
 def _digest_summary(papers: list, news: list) -> str:
@@ -61,7 +68,7 @@ def _digest_summary(papers: list, news: list) -> str:
     try:
         return llm_client.complete(prompt).strip()
     except Exception as e:
-        print(f"Digest summary failed: {e}")
+        logger.warning("Digest summary failed: %s", e)
         return ""
 
 
@@ -73,9 +80,9 @@ def main() -> None:
     today = date.today().isoformat()
     since = datetime.now(timezone.utc) - timedelta(hours=26)
 
-    print(f"=== Daily Digest: {today} ===\n")
+    logger.info("=== Daily Digest: %s ===", today)
 
-    print("--- ArXiv Pipeline ---")
+    logger.info("--- ArXiv Pipeline ---")
     arxiv_pipeline.run(config)
 
     # Read today's papers from DB sorted by relevance, capped at max_papers_per_day

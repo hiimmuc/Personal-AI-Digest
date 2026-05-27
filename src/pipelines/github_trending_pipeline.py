@@ -19,21 +19,27 @@ Flow:
 from __future__ import annotations
 
 import base64
-import json
+import logging
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from typing import Dict, List, Optional
 
 import requests
+from tqdm import tqdm
 
 from ..db import database
 from ..llm import client as llm_client
 from ..llm.prompts import GITHUB_TRENDING_PROMPT
+from ..llm.scoring import parse_json_response
+
+logger = logging.getLogger(__name__)
 
 _GH_API = "https://api.github.com"
-_README_MAX_CHARS = 3000  # chars sent to LLM when description is thin
+_README_MAX_CHARS = 3000
+MAX_WORKERS = 4
 
 
 # ── GitHub REST helpers ────────────────────────────────────────────────────────
@@ -58,12 +64,12 @@ def _gh_get(path: str) -> Optional[Dict]:
         if resp.status_code == 403:
             reset = int(resp.headers.get("X-RateLimit-Reset", time.time() + 60))
             wait = max(0, reset - int(time.time())) + 2
-            print(f"    GitHub rate limit hit, waiting {wait}s …")
+            logger.warning("GitHub rate limit hit, waiting %ds", wait)
             time.sleep(wait)
             resp2 = requests.get(url, headers=_gh_headers(), timeout=10)
             return resp2.json() if resp2.status_code == 200 else None
     except Exception as e:
-        print(f"    GitHub API error for {path}: {e}")
+        logger.warning("GitHub API error for %s: %s", path, e)
     return None
 
 
@@ -119,12 +125,9 @@ def _llm_score(repo: Dict, readme: str, topic_categories: List[str], interests: 
         interests=interests,
     )
     try:
-        raw = llm_client.complete(prompt)
-        raw = re.sub(r"```json\n?", "", raw)
-        raw = re.sub(r"```", "", raw).strip()
-        return json.loads(raw)
+        return parse_json_response(llm_client.complete(prompt))
     except Exception as e:
-        print(f"    LLM failed for {repo.get('full_name', '')}: {e}")
+        logger.warning("LLM failed for %s: %s", repo.get("full_name", ""), e)
         return {}
 
 
@@ -175,10 +178,10 @@ def run(config: dict) -> List[Dict]:
     for lang in languages:
         try:
             fetched = gtrending.fetch_repos(since=since, language=lang or "")
-            print(f"  gtrending [{lang or 'all'}]: {len(fetched)} repos")
+            logger.info("gtrending [%s]: %d repos", lang or "all", len(fetched))
             raw_repos.extend(fetched)
         except Exception as e:
-            print(f"  gtrending fetch failed for lang={lang!r}: {e}")
+            logger.warning("gtrending fetch failed for lang=%r: %s", lang, e)
 
     if not raw_repos:
         return []
@@ -192,7 +195,7 @@ def run(config: dict) -> List[Dict]:
             seen_repos.add(key)
             unique_repos.append(r)
 
-    print(f"  {len(unique_repos)} unique repos after dedup")
+    logger.info("%d unique repos after de-dup", len(unique_repos))
 
     # ── Step 2 & 3: GitHub API enrichment + filter archived ───────────────────
     # Use GitHub API if token is available. If the API call fails (expired token,
@@ -233,13 +236,16 @@ def run(config: dict) -> List[Dict]:
         enriched.append(r)
 
     if use_api and api_ok_count == 0:
-        print("  Warning: GITHUB_TOKEN set but all API calls failed (expired/invalid?)")
-    mode_note = f"with API ({api_ok_count} enriched)" if use_api else "from gtrending (no token)"
-    print(f"  {len(enriched)} repos normalised {mode_note}")
+        logger.warning("GITHUB_TOKEN set but all API calls failed (expired/invalid?)")
+    logger.info(
+        "%d repos normalized %s",
+        len(enriched),
+        f"with API ({api_ok_count} enriched)" if use_api else "from gtrending (no token)",
+    )
 
     # ── Step 4: Stage 1 – keyword match ───────────────────────────────────────
     matched: List[Dict] = [r for r in enriched if _keyword_match(r, keywords)]
-    print(f"  {len(matched)} repos passed Stage 1 keyword match")
+    logger.info("%d repos passed Stage 1 keyword match", len(matched))
     if not matched:
         return []
 
@@ -248,37 +254,28 @@ def run(config: dict) -> List[Dict]:
 
     # ── Step 5: Dedup against DB ──────────────────────────────────────────────
     new_repos = [r for r in matched if not database.news_exists(r["html_url"])]
-    print(f"  {len(new_repos)} repos not yet in DB")
+    logger.info("%d repos not yet in DB", len(new_repos))
     if not new_repos:
         return []
 
-    # ── Step 6: Stage 2 – LLM scoring, with README fallback ──────────────────
-    results: List[Dict] = []
+    # -- Step 6: Stage 2 -- LLM scoring + README fetch (concurrent) --------------
     today = date.today().isoformat()
 
-    for r in new_repos:
-        owner_name = r["full_name"].split("/")[0] if "/" in r["full_name"] else r.get("author", "")
-        repo_name = r["full_name"].split("/")[1] if "/" in r["full_name"] else r.get("name", "")
-
-        # Fetch README when description is thin (< 80 chars or no topics)
+    def _score_repo(r: Dict) -> Optional[Dict]:
+        parts = r["full_name"].split("/") if "/" in r["full_name"] else []
+        owner_name = parts[0] if parts else r.get("author", "")
+        repo_name = parts[1] if len(parts) > 1 else r.get("name", "")
         readme = ""
         if len(r.get("description", "")) < 80 or not r.get("topics"):
             readme = _fetch_readme(owner_name, repo_name)
-
-        print(f"  Scoring: {r['full_name']} …")
         analysis = _llm_score(r, readme, topic_categories, interests_text)
         if not analysis:
-            continue
-
+            return None
         relevance = int(analysis.get("relevance", 1))
         if relevance < relevance_cutoff:
-            continue
-
-        # Format pushed_at as YYYY-MM-DD
+            return None
         pushed_raw = r.get("pushed_at", "") or ""
-        published_date = pushed_raw[:10] if pushed_raw else today
-
-        item: Dict = {
+        return {
             "url": r["html_url"],
             "title": r["full_name"],
             "source": "GitHub Trending",
@@ -286,16 +283,25 @@ def run(config: dict) -> List[Dict]:
             "tags": analysis.get("tags", ""),
             "topic_category": analysis.get("topic_category", ""),
             "relevance": relevance,
-            "published_date": published_date,
+            "published_date": pushed_raw[:10] if pushed_raw else today,
         }
-        results.append(item)
 
-    # ── Step 7: Sort by pushed_at descending ──────────────────────────────────
+    results: List[Dict] = []
+    llm_client.try_init()
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(_score_repo, r): r for r in new_repos}
+        for future in tqdm(as_completed(futures), total=len(new_repos), desc="Scoring repos"):
+            try:
+                item = future.result()
+            except Exception as e:
+                logger.warning("Scoring failed: %s", e)
+                continue
+            if item:
+                results.append(item)
+
     results.sort(key=lambda x: x.get("published_date", ""), reverse=True)
 
-    # ── Step 8: Write to DB ───────────────────────────────────────────────────
     for item in results:
         database.upsert_news_item(item)
-    print(f"  Saved {len(results)} GitHub Trending repos to database")
-
+    logger.info("Saved %d GitHub Trending repos to database", len(results))
     return results

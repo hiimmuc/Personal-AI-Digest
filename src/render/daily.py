@@ -205,22 +205,18 @@ def render_paper(paper: Dict) -> str:
         body_lines += [
             '<details class="abstract">',
             "<summary>Abstract</summary>",
-            "",
             f'<p class="paper-detail"><strong>ArXiv ID:</strong>'
             f' <a href="https://arxiv.org/abs/{arxiv_id}" target="_blank"'
             f' rel="noopener noreferrer">{arxiv_id}</a></p>',
             f'<p class="paper-detail"><strong>Authors:</strong>'
             f' {paper.get("authors", "")}</p>',
-            "",
             '<p class="paper-detail abstract-body">' "<strong>Abstract:</strong></p>",
             f'<p class="abstract-text">{clean_abstract}</p>',
-            "",
             "</details>",
-            "",
         ]
 
     if insights:
-        body_lines += ['<details class="insights">', "<summary>Insights</summary>", ""]
+        body_lines += ['<details class="insights">', "<summary>Insights</summary>"]
         for key, label in [
             ("contribution", "Contribution"),
             ("core_idea", "Core Idea"),
@@ -231,8 +227,8 @@ def render_paper(paper: Dict) -> str:
             ("limitations", "Limitations"),
         ]:
             if insights.get(key):
-                body_lines += [f"<p><strong>{label}:</strong> {insights[key]}</p>", ""]
-        body_lines += ["</details>", ""]
+                body_lines.append(f"<p><strong>{label}:</strong> {insights[key]}</p>")
+        body_lines.append("</details>")
 
     body_html = "\n".join(body_lines)
 
@@ -260,15 +256,13 @@ def render_paper(paper: Dict) -> str:
       <svg class="author-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" width="12" height="12"><path d="M10.561 8.073a6.005 6.005 0 0 1 3.432 5.142.75.75 0 1 1-1.498.07 4.5 4.5 0 0 0-2.97-3.93l-.04-.012a.75.75 0 0 1 .076-1.27zm-4.5-.31a4.5 4.5 0 0 0-2.97 3.93.75.75 0 0 1-1.498-.07A6.005 6.005 0 0 1 5.025 6.44l-.004.001a.75.75 0 0 1 .04 1.322zM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 1.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
       {paper.get("authors", "")}
     </p>
-    {body_html}
+{body_html}
   </div>
   <div class="paper-actions">
     {pdf_btn}
     {gh_btn}
   </div>
 </div>
-
----
 """
     return block
 
@@ -310,7 +304,6 @@ def render_news_item(item: Dict) -> str:
     <a class="news-read-btn" href="{url}" target="_blank" rel="noopener noreferrer">Read&nbsp;more&nbsp;&#8594;</a>
   </div>
 </div>
-
 """
 
 
@@ -373,7 +366,6 @@ def render_github_trending_item(item: Dict) -> str:
     </div>
   </div>
 </div>
-
 """
 
 
@@ -489,8 +481,11 @@ def render_daily(
             "",
         ]
         for topic in sorted(subject_by_topic):
+            papers_in_topic = subject_by_topic[topic]
+            if not papers_in_topic:
+                continue
             lines += [f"#### {topic}", ""]
-            for p in subject_by_topic[topic]:
+            for p in papers_in_topic:
                 lines.append(render_paper(p))
 
     # ── Subsection 1b: Personal Interests (keyword search) ────────────────────
@@ -502,16 +497,22 @@ def render_daily(
             "",
         ]
         for interest in sorted(topic_by_interest):
+            papers_in_interest = topic_by_interest[interest]
+            if not papers_in_interest:
+                continue
             lines += [f"#### {interest}", ""]
-            for p in topic_by_interest[interest]:
+            for p in papers_in_interest:
                 lines.append(render_paper(p))
 
     # ── Tech News ─────────────────────────────────────────────────────────────
     if regular_news:
         lines += ['<h2 id="tech-news">Tech News</h2>', ""]
         for topic in sorted(news_by_topic):
+            news_in_topic = news_by_topic[topic]
+            if not news_in_topic:
+                continue
             lines += [f"### {topic}", ""]
-            for n in news_by_topic[topic]:
+            for n in news_in_topic:
                 lines.append(render_news_item(n))
 
     # ── GitHub Trending ───────────────────────────────────────────────────────
@@ -526,8 +527,11 @@ def render_daily(
             "",
         ]
         for topic in sorted(gh_by_topic):
+            repos_in_topic = gh_by_topic[topic]
+            if not repos_in_topic:
+                continue
             lines += [f"### {topic}", ""]
-            for r in gh_by_topic[topic]:
+            for r in repos_in_topic:
                 lines.append(render_github_trending_item(r))
 
     return "\n".join(lines)

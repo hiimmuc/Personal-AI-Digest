@@ -1,8 +1,9 @@
-"""ArXiv pipeline: fetch → dedup → LLM score → LLM insights → DB."""
+"""ArXiv pipeline: fetch -> dedup -> LLM score -> LLM insights -> DB."""
 
-import json
+import logging
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from html import unescape
 from typing import Dict, List
@@ -13,7 +14,11 @@ from tqdm import tqdm
 from ..db import database
 from ..llm import client as llm_client
 from ..llm.prompts import INSIGHTS_PROMPT
-from ..llm.scoring import score_papers_batch
+from ..llm.scoring import parse_json_response, score_papers_batch
+
+logger = logging.getLogger(__name__)
+
+MAX_WORKERS = 4
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -53,7 +58,7 @@ def fetch_arxiv_rss(category: str) -> List[Dict]:
         modified=updated_str,
     )
     if getattr(feed, "status", 200) == 304:
-        print(f"  No new papers for {category}")
+        logger.info("No new papers for %s", category)
         return []
 
     papers = []
@@ -130,7 +135,7 @@ def fetch_arxiv_by_topic(topic: str, days_back: int = 3, max_results: int = 20) 
         try:
             return feedparser.parse(url)
         except Exception as e:
-            print(f"  Network error for '{topic}': {e}")
+            logger.warning("Network error for '%s': %s", topic, e)
             return None
 
     feed = _call()
@@ -139,7 +144,7 @@ def fetch_arxiv_by_topic(topic: str, days_back: int = 3, max_results: int = 20) 
 
     status = getattr(feed, "status", 200)
     if status == 429:
-        print(f"  Rate-limited (429) for '{topic}', waiting 60 s then retrying...")
+        logger.warning("Rate-limited (429) for '%s', waiting 60s then retrying...", topic)
         time.sleep(60)
         feed = _call()
         if feed is None:
@@ -147,7 +152,7 @@ def fetch_arxiv_by_topic(topic: str, days_back: int = 3, max_results: int = 20) 
         status = getattr(feed, "status", 200)
 
     if status not in (200, 304):
-        print(f"  ArXiv API returned HTTP {status} for '{topic}', skipping")
+        logger.warning("ArXiv API returned HTTP %d for '%s', skipping", status, topic)
         return []
 
     cutoff = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
@@ -228,17 +233,12 @@ def generate_insights(paper: Dict) -> Dict:
     prompt = INSIGHTS_PROMPT.format(
         title=paper["title"],
         authors=paper["authors"],
-        abstract=paper["abstract"][
-            :3000
-        ],  # Truncate to fit within token limits (4096) after prompt
+        abstract=paper["abstract"][:3000],
     )
     try:
-        raw = llm_client.complete(prompt)
-        raw = re.sub(r"```json\n?", "", raw)
-        raw = re.sub(r"```", "", raw).strip()
-        return json.loads(raw)
+        return parse_json_response(llm_client.complete(prompt))
     except Exception as e:
-        print(f"  Insights failed for {paper['arxiv_id']}: {e}")
+        logger.warning("Insights failed for %s: %s", paper["arxiv_id"], e)
         return {}
 
 
@@ -270,12 +270,12 @@ def run(config: dict) -> List[Dict]:
             if paper["arxiv_id"] not in seen_ids:
                 seen_ids.add(paper["arxiv_id"])
                 all_papers.append(paper)
-    print(f"Fetched {len(all_papers)} papers from ArXiv RSS (subjects)")
+    logger.info("Fetched %d papers from ArXiv RSS (subjects)", len(all_papers))
 
     # ── 2. Topic-based fetch (search API, personalized) ──────────────────────
     topic_papers_raw: List[Dict] = []
     if topic_interests:
-        print(f"Searching ArXiv for {len(topic_interests)} interest topics...")
+        logger.info("Searching ArXiv for %d interest topics...", len(topic_interests))
         for topic in topic_interests:
             results = fetch_arxiv_by_topic(
                 topic, days_back=days_back, max_results=max_topic_papers
@@ -286,13 +286,13 @@ def run(config: dict) -> List[Dict]:
                     seen_ids.add(paper["arxiv_id"])
                     topic_papers_raw.append(paper)
                     added += 1
-            print(f"  '{topic}': {added} new papers")
-        print(f"Fetched {len(topic_papers_raw)} papers from topic search")
+            logger.info("  '%s': %d new papers", topic, added)
+        logger.info("Fetched %d papers from topic search", len(topic_papers_raw))
         all_papers.extend(topic_papers_raw)
 
     # ── 3. Dedup against DB ──────────────────────────────────────────────────
     new_papers = [p for p in all_papers if not database.paper_exists(p["arxiv_id"])]
-    print(f"{len(new_papers)} new (not in DB)")
+    logger.info("%d new (not in DB)", len(new_papers))
     if not new_papers:
         return []
 
@@ -314,7 +314,7 @@ def run(config: dict) -> List[Dict]:
     scored: List[Dict] = []
 
     if subject_papers:
-        print("Scoring subject papers for relevance...")
+        logger.info("Scoring subject papers for relevance...")
         scores = score_papers_batch(subject_papers, topic_categories, interests)
         for paper in subject_papers:
             score_data = scores.get(paper["arxiv_id"], {})
@@ -324,7 +324,9 @@ def run(config: dict) -> List[Dict]:
             paper["relevance"] = relevance
             paper["topic_category"] = score_data.get("topic_category", "General")
             scored.append(paper)
-        print(f"{len(scored)} subject papers pass relevance cutoff (>= {relevance_cutoff})")
+        logger.info(
+            "%d subject papers pass relevance cutoff (>= %d)", len(scored), relevance_cutoff
+        )
         scored = scored[:max_papers]
 
     # Topic papers: use search topic as category; assign default relevance
@@ -337,16 +339,23 @@ def run(config: dict) -> List[Dict]:
     for paper in scored:
         paper["code_url"] = find_code_repo(paper.get("abstract", ""))
         if paper["code_url"]:
-            print(f"  Code: {paper['arxiv_id']} → {paper['code_url']}")
+            logger.info("Code: %s -> %s", paper["arxiv_id"], paper["code_url"])
 
-    # ── 7. LLM pass 2: generate insights ────────────────────────────────────
-    for paper in tqdm(scored, desc="Generating insights"):
-        # print(f"  Insights: {paper['title'][:60]}...")
-        paper["insights"] = generate_insights(paper)
+    # -- 7. LLM pass 2: generate insights (concurrent) -----------------------
+    llm_client.try_init()
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(generate_insights, p): p for p in scored}
+        for future in tqdm(as_completed(futures), total=len(scored), desc="Generating insights"):
+            paper = futures[future]
+            try:
+                paper["insights"] = future.result()
+            except Exception as e:
+                logger.warning("Insights failed for %s: %s", paper["arxiv_id"], e)
+                paper["insights"] = {}
 
     # ── 8. Write to SQLite ───────────────────────────────────────────────────
     for paper in tqdm(scored, desc="Saving to database"):
         database.upsert_paper(paper)
-    print(f"Saved {len(scored)} papers to database")
+    logger.info("Saved %d papers to database", len(scored))
 
     return scored
