@@ -65,10 +65,34 @@ jobs:
               run: bundle exec jekyll build
               working-directory: site
 
-            - name: Upload Pages artifact
-              uses: actions/upload-pages-artifact@v3
+            - name: Delete old Pages artifacts
+              uses: actions/github-script@v7
               with:
-                  path: site/_site
+                  script: |
+                      const artifacts = await github.rest.actions.listArtifactsForRepo({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                      });
+                      const pages = artifacts.data.artifacts.filter(a => a.name === 'github-pages');
+                      for (const artifact of pages) {
+                        await github.rest.actions.deleteArtifact({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          artifact_id: artifact.id,
+                        });
+                      }
 
+            - name: Build Jekyll site
+              run: bundle exec jekyll build
+              working-directory: site
+
+    deploy:
+        needs: run
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
             - name: Deploy to GitHub Pages
+              id: deployment
               uses: actions/deploy-pages@v4
