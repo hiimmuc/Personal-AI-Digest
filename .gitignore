@@ -235,9 +235,9 @@ dist/
 build/
 
 # Jekyll build output
-site/_site/
+# site/_site/
 site/.jekyll-cache/
-site/Gemfile.lock
+# site/Gemfile.lock
 
 # References (already cloned separately)
 references/

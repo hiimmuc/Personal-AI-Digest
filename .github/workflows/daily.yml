@@ -2,11 +2,13 @@ name: Daily Digest
 
 on:
     schedule:
-        - cron: "0 3 * * *" # 10:00 UTC+7 daily
+        - cron: "0 3 * * *"
     workflow_dispatch:
 
 permissions:
     contents: write
+    pages: write
+    id-token: write
 
 jobs:
     run:
@@ -39,12 +41,31 @@ jobs:
                   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
                   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: python main.py
+              run: python -m src.main
 
-            - name: Deploy to GitHub Pages
+            - name: Commit generated content
               run: |
                   git config user.name "digest-bot"
                   git config user.email "bot@noreply"
-                  git add docs/
+                  git add site/
                   git diff --staged --quiet || git commit -m "digest: $(date +%Y-%m-%d)"
                   git push origin dev
+
+            - name: Setup Ruby for Jekyll
+              uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.1"
+                  bundler-cache: true
+                  working-directory: site
+
+            - name: Build Jekyll site
+              run: bundle exec jekyll build
+              working-directory: site
+
+            - name: Upload Pages artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site/_site
+
+            - name: Deploy to GitHub Pages
+              uses: actions/deploy-pages@v4
