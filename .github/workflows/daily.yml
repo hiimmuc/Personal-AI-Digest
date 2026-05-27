@@ -51,12 +51,15 @@ jobs:
                   git diff --staged --quiet || git commit -m "digest: $(date +%Y-%m-%d)"
                   git push origin dev
 
-            - name: Setup Ruby for Jekyll
-              uses: ruby/setup-ruby@v1
-              with:
-                  ruby-version: "3.1"
-                  bundler-cache: true
-                  working-directory: site
+            # - name: Setup Ruby for Jekyll
+            #   uses: ruby/setup-ruby@v1
+            #   with:
+            #       ruby-version: "3.1"
+            #       bundler-cache: true
+            #       working-directory: site
+            - name: Install Jekyll dependencies
+              run: bundle install --path vendor/bundle
+              working-directory: site
 
             - name: Build Jekyll site
               run: bundle exec jekyll build
