@@ -1,7 +1,7 @@
 title: "AI Digest"
 description: "Personal daily AI & tech research digest"
 url: "https://hiimmuc.github.io"
-baseurl: "/ai-digest-daily"
+baseurl: "/Personal-AI-Digest"
 
 # Author
 author:
@@ -9,7 +9,7 @@ author:
 
 # GitHub
 github:
-    repo_url: "https://github.com/hiimmuc/ai-digest-daily"
+    repo_url: "https://github.com/hiimmuc/Personal-AI-Digest"
 
 # Theme — custom modern layout (no remote theme needed for modern pages)
 # Keep remote_theme as fallback for any pages still using 'single' layout

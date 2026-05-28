@@ -144,8 +144,8 @@ def fetch_arxiv_by_topic(topic: str, days_back: int = 3, max_results: int = 20) 
 
     status = getattr(feed, "status", 200)
     if status == 429:
-        logger.warning("Rate-limited (429) for '%s', waiting 60s then retrying...", topic)
-        time.sleep(60)
+        logger.warning("Rate-limited (429) for '%s', waiting 10s then retrying...", topic)
+        time.sleep(10)
         feed = _call()
         if feed is None:
             return []
