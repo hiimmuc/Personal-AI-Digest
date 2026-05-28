@@ -37,9 +37,16 @@ The system runs entirely on a **self-hosted GitHub Actions runner**, so the SQLi
 
 ### Research Pipeline (ArXiv)
 
+Two complementary discovery modes run every day and feed the same downstream pipeline:
+
+| Mode | How it works |
+|---|---|
+| **Subject (RSS)** | ArXiv RSS feed queried per configured category (`cs.AI`, `cs.LG`, `cs.CV`, `cs.CL`, `cs.RO`, `cs.HC`) — global trend discovery |
+| **Topic (keyword search)** | ArXiv search API queried per `topic_interests` entry using `ti:/abs:` phrase search with a date-range filter — personalized discovery |
+
 | Step | What happens |
 |---|---|
-| **Fetch** | ArXiv RSS API queried for new submissions across all configured categories |
+| **Fetch** | Both modes run; each paper tagged with `discovery_type` (`subject` or `topic`) and `search_topic` |
 | **Dedup** | Each `arxiv_id` is checked against SQLite before any processing begins |
 | **H-index filter** | Semantic Scholar API fetches author h-indexes; papers with no high-h-index author are dropped, saving LLM budget |
 | **Author watchlist** | Papers by watched authors receive an automatic relevance boost |
@@ -56,6 +63,18 @@ The system runs entirely on a **self-hosted GitHub Actions runner**, so the SQLi
 | **Dedup** | URL deduplicated against SQLite before LLM calls |
 | **LLM summarise** | Single call per item returns `{summary, tags, topic_category, relevance 1–5}` |
 | **Filter & persist** | Items below relevance cutoff are discarded; the rest are written to `news_items` |
+
+### GitHub Trending Pipeline
+
+| Step | What happens |
+|---|---|
+| **Fetch** | `gtrending` library queries trending repos for each configured language (`""` = all, `python`, `jupyter-notebook`, etc.) with the configured `since` window (`daily` / `weekly` / `monthly`) |
+| **Archived filter** | Repos flagged `archived=True` are immediately dropped |
+| **GitHub API enrichment** | Topics, `pushed_at`, description, and README text fetched via GitHub REST API (parallel, up to 4 workers) |
+| **Stage 1 — Keyword match** | Repo name, description, topics, and README scanned against merged keyword list (ArXiv `topic_interests` + `interests`) — misses are dropped without LLM cost |
+| **Stage 2 — LLM score** | Each surviving repo sent to LLM with full context; returns `{relevance 1–5, topic_category, summary, tags}`; repos below `relevance_cutoff` dropped |
+| **Sort & cap** | Repos sorted by `pushed_at` descending, capped at `max_repos` |
+| **Persist** | Written to `news_items` table with `source="GitHub Trending"` |
 
 ### Delivery
 
@@ -81,6 +100,7 @@ The system runs entirely on a **self-hosted GitHub Actions runner**, so the SQLi
 | Library | Role |
 |---|---|
 | `feedparser` | Parse ArXiv RSS and all news RSS/Atom feeds with one unified interface |
+| `gtrending` | Scrape GitHub Trending page for rising repositories by language and time window |
 | `openai` | OpenAI-compatible client used for both the self-hosted vLLM endpoint and the Azure OpenAI fallback |
 | `requests` | Synchronous HTTP for Semantic Scholar API, Papers With Code API, and Telegram Bot API |
 | `PyYAML` | Load `config.yaml` — user preferences, source list, topic categories |
@@ -139,8 +159,9 @@ ai-digest-daily/
 │   │   └── scoring.py           ← batched relevance scoring + JSONL parser
 │   │
 │   ├── pipelines/
-│   │   ├── arxiv_pipeline.py    ← fetch → filter → score → code lookup → insights → DB
-│   │   └── news_pipeline.py     ← fetch → dedup → summarise → DB
+│   │   ├── arxiv_pipeline.py    ← fetch (RSS + keyword search) → filter → score → code lookup → insights → DB
+│   │   ├── news_pipeline.py     ← fetch → dedup → summarise → DB
+│   │   └── github_trending_pipeline.py  ← fetch → keyword filter → LLM score → DB (source="GitHub Trending")
 │   │
 │   ├── render/
 │   │   ├── daily.py             ← daily digest Markdown with relevance dots + code badges
@@ -171,45 +192,62 @@ ai-digest-daily/
 ### Data Flow
 
 ```text
-          ArXiv RSS ──────┐
-                          ▼
-                    fetch_arxiv_rss()
-                          │
-                    dedup vs SQLite ──── (already seen → skip)
-                          │
-                  Semantic Scholar API
-                  (h-index filter)
-                          │
-                    LLM pass 1
-                  (batch scoring)
-                          │
-                relevance cutoff ──── (score < 2 → drop)
-                          │
-                  Papers With Code
-                  (code URL lookup)
-                          │
-                    LLM pass 2
-                (per-paper insights)
-                          │
-                    upsert_paper()
-                          │
-          RSS Feeds ──────┐
-                          ▼
-                   fetch_rss_feed()
-                          │
-                    dedup vs SQLite
-                          │
-                    LLM summarise
-                          │
-                relevance cutoff
-                          │
-                  upsert_news_item()
-                          │
-                    render_daily()
-                          │
-               site/_posts/YYYY-MM-DD.md
-                          │
-               GitHub Pages deploy ──► telegram.push_daily()
+  ArXiv RSS (per category) ──┐
+                             │  fetch_arxiv_rss()
+  ArXiv keyword search ──────┘  fetch_arxiv_by_topic()
+          (per topic_interest)        │ discovery_type + search_topic tagged
+                                      │
+                              dedup vs SQLite ──── (already seen → skip)
+                                      │
+                            Semantic Scholar API
+                            (h-index filter)
+                                      │
+                              LLM pass 1
+                            (batch scoring)
+                                      │
+                          relevance cutoff ──── (score < 2 → drop)
+                                      │
+                            Papers With Code
+                            (code URL lookup)
+                                      │
+                              LLM pass 2
+                          (per-paper insights)
+                                      │
+                              upsert_paper()
+                                      │
+          RSS Feeds ─────────┐
+                             ▼
+                      fetch_rss_feed()
+                             │
+                      dedup vs SQLite
+                             │
+                      LLM summarise
+                             │
+                  relevance cutoff
+                             │
+                    upsert_news_item()
+                             │
+  GitHub Trending ───────────┐
+                             ▼
+                    gtrending.fetch_repos()
+                             │
+                    archived filter
+                             │
+                  GitHub API enrichment
+                  (topics, README, pushed_at)
+                             │
+                  Stage 1: keyword match ──── (no match → skip)
+                             │
+                  Stage 2: LLM score ──────── (score < cutoff → drop)
+                             │
+                    upsert_news_item()
+                    (source="GitHub Trending")
+                             │
+                      render_daily()
+                             │
+             site/_posts/YYYY-MM-DD.md
+                             │
+             GitHub Pages deploy ──► telegram.push_daily()
 ```
 
 ### Database Schema
@@ -227,6 +265,8 @@ ai-digest-daily/
 | `relevance` | INTEGER | 1–5 |
 | `insights` | TEXT | JSON blob (7 structured fields) |
 | `code_url` | TEXT | GitHub repo URL if found |
+| `discovery_type` | TEXT | `subject` (RSS) or `topic` (keyword search) |
+| `search_topic` | TEXT | Interest topic that triggered discovery (topic mode only) |
 | `published_date` | TEXT | |
 | `fetched_date` | TEXT | |
 | `digest_date` | TEXT | |
@@ -266,7 +306,7 @@ complete(prompt)
 ```
 
 No retry loops, no circuit breaker — sequential `try/except` per tier. Simple and auditable.
-Ollama endpoint and model are configurable via `OLLAMA_ENDPOINT` and `OLLAMA_MODEL` env vars (defaults: `http://localhost:11434/v1`, `qwen2.5:7b`).
+Ollama endpoint and model are configurable via `OLLAMA_ENDPOINT` and `OLLAMA_MODEL` env vars (defaults: `http://localhost:11434/v1`, `qwen3:14b`).
 
 ---
 
@@ -382,10 +422,11 @@ Set the following secrets under *Settings → Secrets and variables → Actions*
 | `VLLM_ENDPOINT` | Optional | Self-hosted vLLM base URL |
 | `VLLM_MODEL` | Optional | Model name on the vLLM instance |
 | `OLLAMA_ENDPOINT` | Optional | Ollama base URL (default: `http://localhost:11434/v1`) |
-| `OLLAMA_MODEL` | Optional | Ollama model name (default: `qwen2.5:7b`) |
+| `OLLAMA_MODEL` | Optional | Ollama model name (default: `qwen3:14b`) |
 | `AZURE_OPENAI_ENDPOINT` | Required | Azure OpenAI resource URL |
 | `AZURE_OPENAI_KEY` | Required | Azure API key |
 | `AZURE_OPENAI_MODEL` | Required | Deployment name (e.g. `gpt-4o`) |
 | `SEMANTIC_SCHOLAR_KEY` | Optional | S2 API key (avoids rate limits) |
+| `GITHUB_TOKEN` | Optional | GitHub PAT for GitHub API enrichment in the Trending pipeline (avoids rate limits) |
 | `TELEGRAM_BOT_TOKEN` | Optional | Bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Optional | Target chat or channel ID |
