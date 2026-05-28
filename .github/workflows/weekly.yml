@@ -47,7 +47,7 @@ jobs:
               run: |
                   git config user.name "digest-bot"
                   git config user.email "bot@noreply"
-                  git add site/              # ✅ stage Jekyll site folder
+                  git add site/
                   git diff --staged --quiet || git commit -m "weekly rollup: week $(date +%V)"
                   git push origin dev
 
