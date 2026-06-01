@@ -1,5 +1,6 @@
 """Daily pipeline entrypoint: ArXiv + News -> SQLite -> Markdown."""
 
+import argparse
 import logging
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -72,12 +73,29 @@ def _digest_summary(papers: list, news: list) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Run daily digest pipeline.")
+    parser.add_argument(
+        "--date",
+        type=str,
+        default=None,
+        help="Target date in YYYY-MM-DD format (default: today). Use to backfill missing days.",
+    )
+    args, _ = parser.parse_known_args()
+
     config = _load_config()
     database.init_db()
     _write_jekyll_data(config)
 
-    today = date.today().isoformat()
-    since = datetime.now(timezone.utc) - timedelta(hours=26)
+    if args.date:
+        target_date = date.fromisoformat(args.date)
+    else:
+        target_date = date.today()
+
+    today = target_date.isoformat()
+    # Fetch papers/news published up to 26 h after midnight of the target date
+    since = datetime(
+        target_date.year, target_date.month, target_date.day, tzinfo=timezone.utc
+    ) - timedelta(hours=2)
 
     logger.info("=== Daily Digest: %s ===", today)
 
