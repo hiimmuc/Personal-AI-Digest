@@ -44,6 +44,8 @@ def main() -> None:
 
     print(f"=== Weekly Rollup: Week {week} ({date_range}) ===\n")
 
+    database.init_db()
+
     papers = database.get_papers_for_week(week)
     news_items = database.get_news_for_week(week)
     print(f"Found {len(papers)} papers, {len(news_items)} news items for week {week}")
