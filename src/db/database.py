@@ -37,7 +37,7 @@ def init_db():
                 embedding     BLOB
             )
         """)
-        # Migrations: add columns to existing DBs
+        # Migrations: add columns to existing papers table
         for col, definition in [
             ("code_url", "TEXT DEFAULT ''"),
             ("discovery_type", "TEXT DEFAULT 'subject'"),
@@ -60,9 +60,15 @@ def init_db():
                 fetched_date  TEXT,
                 digest_date   TEXT,
                 digest_week   INTEGER,
+                stars         INTEGER DEFAULT 0,
                 embedding     BLOB
             )
         """)
+        # Migrations: add columns to existing news_items table
+        try:
+            conn.execute("ALTER TABLE news_items ADD COLUMN stars INTEGER DEFAULT 0")
+        except Exception:
+            pass  # column already exists
         conn.commit()
 
 
@@ -122,8 +128,8 @@ def upsert_news_item(item: dict):
             """
             INSERT OR REPLACE INTO news_items
             (url, title, source, summary, tags, topic_category, relevance,
-             published_date, fetched_date, digest_date, digest_week, embedding)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+             published_date, fetched_date, digest_date, digest_week, stars, embedding)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
             """,
             (
                 item["url"],
@@ -137,6 +143,7 @@ def upsert_news_item(item: dict):
                 today,
                 today,
                 week,
+                item.get("stars", 0),
             ),
         )
         conn.commit()
@@ -172,7 +179,16 @@ def get_papers_for_week(digest_week: int) -> list:
 def get_news_for_week(digest_week: int) -> list:
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM news_items WHERE digest_week = ? ORDER BY relevance DESC",
+            "SELECT * FROM news_items WHERE digest_week = ? AND source != 'GitHub Trending' ORDER BY relevance DESC",
+            (digest_week,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_repos_for_week(digest_week: int) -> list:
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM news_items WHERE digest_week = ? AND source = 'GitHub Trending' ORDER BY stars DESC, relevance DESC",
             (digest_week,),
         ).fetchall()
         return [dict(row) for row in rows]

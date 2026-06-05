@@ -93,13 +93,16 @@ Return ONLY this JSON:
 
 
 WEEKLY_NARRATIVE_PROMPT = """Write a 4–5 sentence narrative paragraph summarizing this week in AI and tech.
-Be analytical and highlight the most significant themes and developments.
+Be analytical and highlight the most significant themes, developments, and community activity.
 
 Top papers this week:
 {papers}
 
 Top news this week:
 {news}
+
+Top repos this week:
+{repos}
 
 Write only the paragraph, no title or preamble."""
 

@@ -284,6 +284,7 @@ def run(config: dict) -> List[Dict]:
             "topic_category": analysis.get("topic_category", ""),
             "relevance": relevance,
             "published_date": pushed_raw[:10] if pushed_raw else today,
+            "stars": r.get("stargazers_count", 0),
         }
 
     results: List[Dict] = []

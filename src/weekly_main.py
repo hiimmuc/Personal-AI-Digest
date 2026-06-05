@@ -22,10 +22,15 @@ def _load_config() -> dict:
         return yaml.safe_load(f)
 
 
-def _narrative(papers: list, news: list) -> str:
+def _narrative(papers: list, news: list, repos: list) -> str:
     papers_text = "\n".join(f"- {p['title']}" for p in papers[:10])
     news_text = "\n".join(f"- {n['title']}" for n in news[:10])
-    prompt = WEEKLY_NARRATIVE_PROMPT.format(papers=papers_text, news=news_text)
+    repos_text = "\n".join(f"- {r['title']} (★{r.get('stars', 0):,})" for r in repos[:10])
+    prompt = WEEKLY_NARRATIVE_PROMPT.format(
+        papers=papers_text or "(none)",
+        news=news_text or "(none)",
+        repos=repos_text or "(none)",
+    )
     try:
         return llm_client.complete(prompt).strip()
     except Exception as e:
@@ -48,11 +53,14 @@ def main() -> None:
 
     papers = database.get_papers_for_week(week)
     news_items = database.get_news_for_week(week)
-    print(f"Found {len(papers)} papers, {len(news_items)} news items for week {week}")
+    repos = database.get_repos_for_week(week)
+    print(
+        f"Found {len(papers)} papers, {len(news_items)} news items, {len(repos)} repos for week {week}"
+    )
 
-    narrative = _narrative(papers, news_items)
+    narrative = _narrative(papers, news_items, repos)
 
-    content = weekly_renderer.render_weekly(papers, news_items, week, date_range, narrative)
+    content = weekly_renderer.render_weekly(papers, news_items, repos, week, date_range, narrative)
 
     _SITE_DIR.mkdir(parents=True, exist_ok=True)
     out_path = _SITE_DIR / f"week-{week:02d}.md"
