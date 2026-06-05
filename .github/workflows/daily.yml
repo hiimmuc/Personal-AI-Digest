@@ -13,6 +13,8 @@ permissions:
 jobs:
     run:
         runs-on: self-hosted
+        env:
+            FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         steps:
             - name: Checkout repo
               uses: actions/checkout@v4
@@ -76,11 +78,10 @@ jobs:
             #           }
 
             - name: Upload Pages artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v4
               with:
+                  name: build-${{ github.job }}-${{ github.run_id }}
                   path: site/_site
-                  overwrite: true
-
     deploy:
         needs: run
         runs-on: ubuntu-latest
