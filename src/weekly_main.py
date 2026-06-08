@@ -41,13 +41,22 @@ def _narrative(papers: list, news: list, repos: list) -> str:
 def main() -> None:
     config = _load_config()
 
-    today = date.today()
+    # today = date.today()
+    today = date.fromisoformat(
+        "2026-06-07"
+    )  # for testing: use a fixed date to get consistent results
     week = today.isocalendar()[1]
     monday = today - timedelta(days=today.weekday())
     sunday = monday + timedelta(days=6)
     date_range = f"{monday.isoformat()} – {sunday.isoformat()}"
 
     print(f"=== Weekly Rollup: Week {week} ({date_range}) ===\n")
+
+    _SITE_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = _SITE_DIR / f"week-{week:02d}.md"
+    if out_path.exists():
+        print(f"Weekly rollup already exists for week {week}, skipping pipeline.")
+        return
 
     database.init_db()
 
@@ -62,8 +71,6 @@ def main() -> None:
 
     content = weekly_renderer.render_weekly(papers, news_items, repos, week, date_range, narrative)
 
-    _SITE_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = _SITE_DIR / f"week-{week:02d}.md"
     out_path.write_text(content, encoding="utf-8")
     print(f"Wrote weekly rollup → {out_path}")
 

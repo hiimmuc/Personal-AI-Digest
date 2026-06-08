@@ -99,6 +99,11 @@ def main() -> None:
 
     logger.info("=== Daily Digest: %s ===", today)
 
+    post_path = _SITE_DIR / f"{today}-daily.md"
+    if post_path.exists():
+        logger.info("Digest already exists for %s, skipping pipeline.", today)
+        return
+
     logger.info("--- ArXiv Pipeline ---")
     arxiv_pipeline.run(config)
 
@@ -141,7 +146,6 @@ def main() -> None:
 
     # Write Jekyll post: site/_posts/YYYY-MM-DD-daily.md
     _SITE_DIR.mkdir(parents=True, exist_ok=True)
-    post_path = _SITE_DIR / f"{today}-daily.md"
     post_path.write_text(content, encoding="utf-8")
     print(f"\nWrote digest → {post_path}")
 
