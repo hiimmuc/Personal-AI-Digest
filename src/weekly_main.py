@@ -43,7 +43,7 @@ def main() -> None:
 
     # today = date.today()
     today = date.fromisoformat(
-        "2026-06-07"
+        "2026-06-08"
     )  # for testing: use a fixed date to get consistent results
     week = today.isocalendar()[1]
     monday = today - timedelta(days=today.weekday())
