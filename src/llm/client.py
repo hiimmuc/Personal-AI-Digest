@@ -75,8 +75,8 @@ def _build_backends() -> list:
 
     return [
         _Backend("vLLM", vllm, max_tokens=2048),
-        _Backend("Ollama", ollama, max_tokens=8192),
-        _Backend("Azure", azure),
+        # _Backend("Ollama", ollama, max_tokens=8192),
+        # _Backend("Azure", azure),
     ]
 
 
