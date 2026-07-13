@@ -99,7 +99,7 @@ def main() -> None:
 
     logger.info("=== Daily Digest: %s ===", today)
 
-    post_path = _SITE_DIR / f"{today}-daily.md"
+    post_path = _SITE_DIR / f"{target_date:%Y}" / f"{target_date:%m}" / f"{today}-digest.md"
     if post_path.exists():
         logger.info("Digest already exists for %s, skipping pipeline.", today)
         return
@@ -144,7 +144,7 @@ def main() -> None:
 
     content = daily_renderer.render_daily(papers, news_items, today, theme)
 
-    # Write Jekyll post: site/_posts/YYYY-MM-DD-daily.md
+    # Write Jekyll post: site/_posts/YYYY/MM/YYYY-MM-DD-digest.md
     _SITE_DIR.mkdir(parents=True, exist_ok=True)
     post_path.write_text(content, encoding="utf-8")
     print(f"\nWrote digest → {post_path}")
